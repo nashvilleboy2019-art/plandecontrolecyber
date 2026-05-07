@@ -45,6 +45,7 @@
           <a href="#admin" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Administration</a>
           <a href="#utilisateurs" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Utilisateurs</a>
           <a href="#parametres" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Paramètres</a>
+          <a href="#ldap" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ LDAP / SSO</a>
           <a href="#jira" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ JIRA</a>
           <a href="#activite" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Journal d'activité</a>
           <a href="#faq" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">FAQ</a>
@@ -496,6 +497,54 @@
         </div>
       </section>
 
+      <!-- ─── LDAP / SSO ──────────────────────────────────────────────── -->
+      <section id="ldap">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">LDAP / SSO (Active Directory)</h2>
+        <div class="space-y-4 text-gray-600">
+          <p>L'application supporte l'authentification via un annuaire <strong>Active Directory / LDAP</strong>. Une fois activée, les utilisateurs peuvent se connecter avec leurs identifiants de domaine — aucun compte local n'est nécessaire pour eux.</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Fonctionnement</h3>
+            <ul class="list-disc list-inside space-y-1 text-xs">
+              <li>L'authentification LDAP est tentée en premier. En cas d'échec ou si LDAP est désactivé, le compte local est utilisé en fallback.</li>
+              <li>Lors de la <strong>première connexion LDAP</strong>, un compte local est créé automatiquement avec le rôle par défaut configuré.</li>
+              <li>À chaque connexion, le nom complet et l'email sont synchronisés depuis l'annuaire.</li>
+              <li>Le <strong>mot de passe local n'est pas utilisé</strong> pour les comptes authentifiés via LDAP.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Configuration (Paramètres → LDAP / SSO)</h3>
+            <div class="overflow-hidden rounded-xl border border-gray-200">
+              <table class="w-full text-xs">
+                <thead><tr class="bg-gray-50 border-b"><th class="text-left px-4 py-2 font-medium text-gray-500 w-44">Champ</th><th class="text-left px-4 py-2 font-medium text-gray-500">Description</th></tr></thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Activer LDAP</td><td class="px-4 py-2.5 text-gray-600">Cocher pour activer l'authentification LDAP/AD. Le fallback local reste actif.</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Serveur LDAP</td><td class="px-4 py-2.5 text-gray-600">Adresse du contrôleur de domaine. Ex. <code class="bg-gray-100 px-1 rounded font-mono">ad.entreprise.local</code></td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Port</td><td class="px-4 py-2.5 text-gray-600">389 (LDAP standard) ou 636 (LDAPS). Activer TLS si 636.</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Domaine</td><td class="px-4 py-2.5 text-gray-600">Nom de domaine Windows. Ex. <code class="bg-gray-100 px-1 rounded font-mono">entreprise.local</code></td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Base DN</td><td class="px-4 py-2.5 text-gray-600">Optionnel — déduit du domaine si laissé vide. Ex. <code class="bg-gray-100 px-1 rounded font-mono">dc=entreprise,dc=local</code></td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Restreindre à l'OU</td><td class="px-4 py-2.5 text-gray-600">Optionnel — seuls les comptes dont le DN contient cette OU sont autorisés. Ex. <code class="bg-gray-100 px-1 rounded font-mono">OU=Informatique,DC=entreprise,DC=local</code></td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Groupe requis</td><td class="px-4 py-2.5 text-gray-600">Optionnel — filtre par appartenance à un groupe AD. Ex. <code class="bg-gray-100 px-1 rounded font-mono">GRP-PDC-Utilisateurs</code></td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Rôle par défaut</td><td class="px-4 py-2.5 text-gray-600">Rôle attribué lors de la création automatique du compte : <em>Auditeur</em> ou <em>Responsable</em>.</td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">TLS / SSL</td><td class="px-4 py-2.5 text-gray-600">Activer pour les connexions LDAPS (port 636). Le certificat serveur n'est pas vérifié.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Tester la connexion</h3>
+            <p class="text-xs">Le bouton <strong>Tester la connexion</strong> (en haut à droite du panneau LDAP) vérifie l'accessibilité du serveur sans effectuer d'authentification utilisateur.</p>
+          </div>
+
+          <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-amber-800 text-xs space-y-1">
+            <p>⚠ Le compte <strong>admin</strong> local reste toujours fonctionnel même si LDAP est activé — conservez son mot de passe en lieu sûr.</p>
+            <p>Les comptes créés automatiquement via LDAP peuvent être retrouvés et modifiés (rôle, désactivation) dans <strong>Paramètres → Utilisateurs</strong>.</p>
+          </div>
+        </div>
+      </section>
+
       <!-- ─── JIRA ───────────────────────────────────────────────────── -->
       <section id="jira">
         <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Intégration JIRA</h2>
@@ -558,7 +607,11 @@
             ("Peut-on supprimer une thématique utilisée par des contrôles ?",
              "Oui. La suppression est autorisée même si la thématique est associée à des contrôles — ceux-ci seront détachés (champ thématique vidé). Une confirmation indique le nombre de contrôles affectés. Si vous souhaitez simplement masquer la thématique sans perdre de données, préférez la désactiver via le bouton Inactif dans Admin."),
             ("Comment exporter les données ?",
-             "Le tableau de bord propose un bouton Exporter Excel qui génère un fichier .xlsx complet avec résumé, conformité par thématique, tendance mensuelle et liste de tous les contrôles pour l'année sélectionnée.")
+             "Le tableau de bord propose un bouton Exporter Excel qui génère un fichier .xlsx complet avec résumé, conformité par thématique, tendance mensuelle et liste de tous les contrôles pour l'année sélectionnée."),
+            ("L'authentification LDAP fonctionne-t-elle avec Azure AD ?",
+             "Non directement — l'intégration utilise le protocole LDAP classique (ldap3) et requiert un contrôleur de domaine Active Directory on-premise accessible en réseau. Azure AD ne propose pas de point d'entrée LDAP natif sans passer par Azure AD Domain Services."),
+            ("Un utilisateur LDAP peut-il changer son mot de passe dans l'application ?",
+             "Non. Pour les comptes authentifiés via LDAP, le mot de passe est géré par l'annuaire Active Directory. Le champ mot de passe dans l'application est ignoré pour ces comptes. Seul le rôle peut être modifié localement.")
           ] %}
 
           {% for question, reponse in faq %}

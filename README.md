@@ -22,6 +22,7 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 - **Tableau de bord** — taux global, conformité par thématique / catégorie / périmètre, tendance mensuelle, graphiques de réalisation par entité
 - **Journal d'activité** — toutes les actions tracées avec lien direct vers la ressource
 - **Gestion des référentiels** — thématiques, catégories (entités) et périmètres configurables depuis l'administration
+- **Authentification LDAP / SSO** — connexion via Active Directory avec création automatique des comptes, filtrage par OU et groupe AD, fallback local
 - **Intégration JIRA** — création automatique de tickets sur non-conformance (API JIRA Cloud v3)
 - **Historique** — historique détaillé des modifications sur chaque contrôle et chaque résultat
 - **Archivage** — les contrôles archivés sont masqués mais conservent leur historique
@@ -52,7 +53,7 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 
 - **Backend** : Python 3.10+ · FastAPI · SQLAlchemy 2 · SQLite
 - **Frontend** : Jinja2 · Tailwind CSS (CDN JIT) · Alpine.js v3 · Chart.js 4
-- **Auth** : sessions Starlette · bcrypt
+- **Auth** : sessions Starlette · bcrypt · ldap3 (LDAP/AD, optionnel)
 - **Export** : openpyxl (Excel)
 - **Incidents** : requests (JIRA REST API v3, optionnel)
 
@@ -178,6 +179,25 @@ Depuis **Paramètres → JIRA**, configurer :
 - Clé du projet JIRA
 
 Lors de l'ouverture d'un incident, cocher "Pousser un ticket JIRA" pour créer automatiquement un ticket avec le détail du contrôle non conforme.
+
+## Authentification LDAP / SSO
+
+Depuis **Paramètres → LDAP / SSO**, configurer :
+
+| Champ | Description |
+|---|---|
+| Serveur LDAP | Adresse du contrôleur de domaine (ex. `ad.entreprise.local`) |
+| Port | 389 (LDAP) ou 636 (LDAPS) |
+| Domaine | Domaine Windows (ex. `entreprise.local`) |
+| Base DN | Optionnel — déduit du domaine si vide |
+| Restreindre à l'OU | Optionnel — filtre par unité organisationnelle |
+| Groupe requis | Optionnel — filtre par appartenance à un groupe AD |
+| Rôle par défaut | Rôle attribué à la création automatique du compte (`auditeur` ou `responsable`) |
+| TLS / SSL | Activer pour LDAPS (port 636) |
+
+**Fonctionnement** : l'authentification LDAP est tentée en premier ; le compte local sert de fallback. Lors de la première connexion LDAP, un compte est créé automatiquement. Le bouton **Tester la connexion** vérifie l'accessibilité du serveur.
+
+> Le compte `admin` local reste toujours fonctionnel même si LDAP est activé.
 
 ## Licence
 
