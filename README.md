@@ -11,6 +11,18 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 
 ---
 
+## Aperçu
+
+| Tableau de bord | Liste des contrôles |
+|:---:|:---:|
+| ![Dashboard](static/screenshots/dashboard.png) | ![Contrôles](static/screenshots/controls_list.png) |
+
+| Campagne mensuelle | Administration |
+|:---:|:---:|
+| ![Campagne](static/screenshots/campagne.png) | ![Admin](static/screenshots/admin.png) |
+
+---
+
 ## Fonctionnalités
 
 - **Référentiel de contrôles** — création et gestion des contrôles avec référence, libellé, indicateur, objectif, fréquence, taux cible et lien vers le guide/procédure
