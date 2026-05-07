@@ -122,6 +122,19 @@
   </div>
 </div>
 
+<!-- Controls by auditor -->
+{% if stats.by_auditor %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-8">
+  <h2 class="text-base font-semibold text-gray-800 mb-4">
+    Répartition des contrôles par auditeur – {{ current_year }}
+    <span class="text-xs font-normal text-gray-400 ml-2">Contrôles assignés en campagne · réalisés · conformité moyenne</span>
+  </h2>
+  <div style="height: {{ [stats.by_auditor|length * 44, 120]|max }}px">
+    <canvas id="chartByAuditor"></canvas>
+  </div>
+</div>
+{% endif %}
+
 <!-- Alerts & warnings -->
 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
 
@@ -471,6 +484,60 @@
       }
     }
   });
+
+  // By auditor — grouped bar: nb contrôles + nb réalisés, colored by avg conformity
+  {% if stats.by_auditor %}
+  const auditorLabels = {{ stats.by_auditor | map(attribute='label') | list | tojson }};
+  const auditorCount  = {{ stats.by_auditor | map(attribute='count') | list | tojson }};
+  const auditorDone   = {{ stats.by_auditor | map(attribute='done')  | list | tojson }};
+  const auditorAvg    = {{ stats.by_auditor | map(attribute='avg')   | list | tojson }};
+  new Chart(document.getElementById('chartByAuditor'), {
+    type: 'bar',
+    data: {
+      labels: auditorLabels,
+      datasets: [
+        {
+          label: 'Assignés',
+          data: auditorCount,
+          backgroundColor: 'rgba(99,102,241,0.2)',
+          borderColor: '#6366f1',
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+        {
+          label: 'Réalisés',
+          data: auditorDone,
+          backgroundColor: auditorAvg.map(v => rateColor(v, 0.85)),
+          borderColor: auditorAvg.map(v => rateBorder(v)),
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            afterLabel: (ctx) => {
+              if (ctx.datasetIndex === 1) {
+                const avg = auditorAvg[ctx.dataIndex];
+                return avg !== null ? `Conformité moy. : ${avg.toFixed(1)}%` : 'Aucun résultat';
+              }
+              return '';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f3f4f6' } },
+        y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+  {% endif %}
 
   // By perimeter — colored by rate
   const perimData = {{ stats.by_perimetre | map(attribute='avg') | list | tojson }};

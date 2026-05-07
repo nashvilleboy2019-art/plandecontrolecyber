@@ -135,7 +135,7 @@
               </tr>
               <tr>
                 <td class="px-4 py-3 font-mono font-bold text-gray-900">auditeur</td>
-                <td class="px-4 py-3 font-mono text-gray-600">audit123</td>
+                <td class="px-4 py-3 font-mono text-gray-600">auditeur</td>
                 <td class="px-4 py-3"><span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">auditeur</span></td>
                 <td class="px-4 py-3 text-gray-600 text-xs">Saisie résultats, consultation</td>
               </tr>
@@ -398,8 +398,18 @@
                 <li>• Conformité par périmètre (barres)</li>
                 <li>• Tendance mensuelle (courbe)</li>
                 <li>• Réalisation par catégorie/mois (barres empilées)</li>
+                <li>• Répartition des contrôles par auditeur (barres horizontales)</li>
               </ul>
             </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Alertes et incidents</h3>
+            <ul class="list-disc list-inside space-y-1 text-xs">
+              <li><strong>Contrôles en retard</strong> — contrôles dont l'échéance est dépassée</li>
+              <li><strong>Incidents en cours</strong> — résultats non conformes avec un incident ouvert et non clôturé, affichés avec leur N° incident et ticket JIRA éventuels</li>
+              <li><strong>Échéance proche</strong> — contrôles dont la prochaine échéance tombe dans moins de 7 jours (seuil configurable dans les paramètres)</li>
+            </ul>
           </div>
 
           <div>
@@ -433,7 +443,7 @@
               </tbody>
             </table>
           </div>
-          <p class="text-xs text-gray-500">Un référentiel utilisé par au moins un contrôle ne peut pas être supprimé — il peut seulement être désactivé.</p>
+          <p class="text-xs text-gray-500">La suppression est toujours possible. Si le référentiel est utilisé par des contrôles, ceux-ci seront détachés (le champ correspondant sera vidé). Vous pouvez aussi désactiver un référentiel pour qu'il n'apparaisse plus dans les formulaires sans perdre de données.</p>
         </div>
       </section>
 
@@ -546,7 +556,7 @@
             ("Que faire si l'application ne démarre pas ?",
              "Vérifiez que Python 3.10+ est installé et que les dépendances sont installées (pip install -r requirements.txt). Si le port 8002 est occupé, changez-le avec PDC_PORT. Consultez la console pour le message d'erreur exact."),
             ("Peut-on supprimer une thématique utilisée par des contrôles ?",
-             "Non — la suppression est bloquée si la thématique est associée à au moins un contrôle. Vous pouvez la désactiver (bouton Inactif dans Admin) pour qu'elle n'apparaisse plus dans les formulaires tout en conservant les données existantes."),
+             "Oui. La suppression est autorisée même si la thématique est associée à des contrôles — ceux-ci seront détachés (champ thématique vidé). Une confirmation indique le nombre de contrôles affectés. Si vous souhaitez simplement masquer la thématique sans perdre de données, préférez la désactiver via le bouton Inactif dans Admin."),
             ("Comment exporter les données ?",
              "Le tableau de bord propose un bouton Exporter Excel qui génère un fichier .xlsx complet avec résumé, conformité par thématique, tendance mensuelle et liste de tous les contrôles pour l'année sélectionnée.")
           ] %}

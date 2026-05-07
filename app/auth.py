@@ -132,26 +132,26 @@ def create_default_data():
                 nom_complet="Auditeur",
             ))
 
-        # Default control types (thématiques)
-        default_types = [
-            ("Gestion des accès", "blue"),
-            ("Surveillance et détection", "red"),
-            ("Continuité et sauvegarde", "green"),
-            ("Gestion des vulnérabilités", "orange"),
-            ("Conformité et audit", "purple"),
-        ]
-        for i, (label, color) in enumerate(default_types):
-            if not db.query(ControlType).filter(ControlType.label == label).first():
+        # Default control types — only on first install (empty table)
+        if db.query(ControlType).count() == 0:
+            default_types = [
+                ("Gestion des accès", "blue"),
+                ("Surveillance et détection", "red"),
+                ("Continuité et sauvegarde", "green"),
+                ("Gestion des vulnérabilités", "orange"),
+                ("Conformité et audit", "purple"),
+            ]
+            for i, (label, color) in enumerate(default_types):
                 db.add(ControlType(label=label, color=color, ordre=i))
 
-        # Default categories
-        for i, label in enumerate(["Entité A", "Entité B"]):
-            if not db.query(Category).filter(Category.label == label).first():
+        # Default categories — only on first install
+        if db.query(Category).count() == 0:
+            for i, label in enumerate(["Entité A", "Entité B"]):
                 db.add(Category(label=label, ordre=i))
 
-        # Default perimetres
-        for i, label in enumerate(["Périmètre SI", "Global"]):
-            if not db.query(Perimetre).filter(Perimetre.label == label).first():
+        # Default perimetres — only on first install
+        if db.query(Perimetre).count() == 0:
+            for i, label in enumerate(["Périmètre SI", "Global"]):
                 db.add(Perimetre(label=label, ordre=i))
 
         # Default app config

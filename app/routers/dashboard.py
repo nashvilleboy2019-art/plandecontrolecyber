@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 import io
 from app.database import get_db
-from app.models import Control, ControlResult, ControlType, Category, Perimetre
+from app.models import Control, ControlResult, ControlType, Category, Perimetre, User
 from app.utils import get_current_user, get_alert_status, current_period, compliance_color, periode_label
 from app.templates_config import templates
 
@@ -113,6 +113,32 @@ def _build_stats(db: Session, year: int = None):
         cat_monthly_done.append({"label": cat.label, "data": done_by_month})
         cat_monthly_todo.append({"label": cat.label, "data": todo_by_month})
 
+    # By auditor — based on assigned_to_id on campaign results for the year
+    by_auditor = []
+    auditor_ids = [
+        row[0] for row in
+        db.query(ControlResult.assigned_to_id)
+        .filter(ControlResult.annee == year, ControlResult.assigned_to_id.isnot(None))
+        .distinct().all()
+    ]
+    for uid in auditor_ids:
+        u = db.query(User).filter(User.id == uid).first()
+        if not u:
+            continue
+        assigned = db.query(ControlResult).filter(
+            ControlResult.annee == year,
+            ControlResult.assigned_to_id == uid,
+        ).all()
+        done = [r for r in assigned if r.taux_conformite is not None]
+        avg = round(sum(r.taux_conformite for r in done) / len(done), 1) if done else None
+        by_auditor.append({
+            "label": u.nom_complet or u.username,
+            "count": len(assigned),
+            "done": len(done),
+            "avg": avg,
+        })
+    by_auditor.sort(key=lambda x: x["count"], reverse=True)
+
     return {
         "year": year,
         "total": total,
@@ -128,6 +154,7 @@ def _build_stats(db: Session, year: int = None):
         "unvalidated": unvalidated,
         "cat_monthly_done": cat_monthly_done,
         "cat_monthly_todo": cat_monthly_todo,
+        "by_auditor": by_auditor,
         "compliance_rate": round(
             sum(r.taux_conformite for r in results_this_year.values()) / len(results_this_year), 1
         ) if results_this_year else None,
