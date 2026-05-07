@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Paramètres – Plan de Contrôle Cyber{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-gray-900">Paramètres</h1>
+  <p class="text-gray-500 text-sm mt-1">Configuration de l'application</p>
+</div>
+
+{% if flash %}
+<div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{{ flash }}</div>
+{% endif %}
+
+<div x-data="{ tab: 'general' }" class="flex flex-col lg:flex-row gap-6">
+
+  <!-- Sidebar tabs -->
+  <div class="lg:w-48 flex-shrink-0">
+    <nav class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {% for key, label in [('general','Général'),('theme','Thème'),('logo','Logo'),('ldap','LDAP / SSO'),('jira','JIRA')] %}
+      <button @click="tab = '{{ key }}'"
+              :class="tab === '{{ key }}' ? 'bg-primary-50 text-primary-700 border-l-2 border-primary-600' : 'text-gray-600 hover:bg-gray-50'"
+              class="w-full text-left px-4 py-3 text-sm font-medium transition-colors">
+        {{ label }}
+      </button>
+      {% endfor %}
+    </nav>
+  </div>
+
+  <!-- Content -->
+  <div class="flex-1">
+
+    <!-- General -->
+    <div x-show="tab === 'general'" class="bg-white rounded-xl shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="text-base font-semibold text-gray-800">Paramètres généraux</h2>
+      </div>
+      <form method="post" action="/settings/general" class="p-6 space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nom de l'organisation</label>
+          <input type="text" name="company_name" value="{{ cfg.get('company_name', '') }}"
+                 placeholder="Mon Organisation"
+                 class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Alerte avertissement (jours avant échéance)</label>
+            <input type="number" name="alert_warning_days" min="0" max="30"
+                   value="{{ cfg.get('alert_warning_days', '7') }}"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Alerte danger (jours après échéance)</label>
+            <input type="number" name="alert_danger_days" min="0" max="30"
+                   value="{{ cfg.get('alert_danger_days', '0') }}"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+        </div>
+        <div class="flex justify-end">
+          <button type="submit" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
+            Sauvegarder
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Theme -->
+    <div x-show="tab === 'theme'" x-cloak class="bg-white rounded-xl shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="text-base font-semibold text-gray-800">Thème de couleur</h2>
+      </div>
+      <form method="post" action="/settings/theme" class="p-6 space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-3">Couleur principale</label>
+          <div class="grid grid-cols-4 gap-3">
+            {% for name in palettes %}
+            <label class="relative cursor-pointer">
+              <input type="radio" name="theme_primary" value="{{ name }}"
+                     {% if cfg.get('theme_primary','indigo') == name %}checked{% endif %}
+                     class="sr-only peer">
+              <div class="h-10 rounded-lg border-2 border-transparent peer-checked:border-gray-800 peer-checked:ring-2 peer-checked:ring-offset-1 peer-checked:ring-gray-400 transition-all
+                          {% if name == 'indigo' %}bg-indigo-500{% elif name == 'blue' %}bg-blue-500{% elif name == 'teal' %}bg-teal-500{% elif name == 'emerald' %}bg-emerald-500{% elif name == 'sky' %}bg-sky-500{% elif name == 'purple' %}bg-purple-500{% elif name == 'rose' %}bg-rose-500{% elif name == 'orange' %}bg-orange-500{% elif name == 'amber' %}bg-amber-500{% elif name == 'slate' %}bg-slate-500{% elif name == 'pink' %}bg-pink-500{% else %}bg-gray-500{% endif %}">
+              </div>
+              <p class="text-center text-xs text-gray-500 mt-1">{{ name|capitalize }}</p>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="flex justify-end">
+          <button type="submit" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
+            Appliquer le thème
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Logo -->
+    <div x-show="tab === 'logo'" x-cloak class="bg-white rounded-xl shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="text-base font-semibold text-gray-800">Logo</h2>
+      </div>
+      <div class="p-6 space-y-6">
+        {% set logo_ext = cfg.get('logo_ext', '') %}
+        {% if logo_ext %}
+        <div class="flex items-center gap-4">
+          <img src="/static/uploads/logo{{ logo_ext }}" alt="Logo actuel" class="h-16 object-contain border rounded-lg p-2 bg-gray-50">
+          <form method="post" action="/settings/logo/delete">
+            <button type="submit" class="text-sm text-red-600 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded-lg hover:border-red-400 transition-colors">
+              Supprimer
+            </button>
+          </form>
+        </div>
+        {% endif %}
+        <form method="post" action="/settings/logo" enctype="multipart/form-data" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              {{ 'Nouveau logo' if logo_ext else 'Télécharger un logo' }}
+            </label>
+            <input type="file" name="logo" accept=".png,.jpg,.jpeg,.svg,.webp" required
+                   class="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100">
+            <p class="text-xs text-gray-400 mt-1">Formats : PNG, JPG, SVG, WebP – Max recommandé 200×60px</p>
+          </div>
+          <button type="submit" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
+            Télécharger
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- LDAP -->
+    <div x-show="tab === 'ldap'" x-cloak class="bg-white rounded-xl shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="text-base font-semibold text-gray-800">Active Directory / LDAP</h2>
+        <a href="/settings/ldap/test" class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors">
+          Tester la connexion
+        </a>
+      </div>
+      <form method="post" action="/settings/ldap" class="p-6 space-y-5">
+        <div class="flex items-center gap-3">
+          <input type="checkbox" name="ldap_enabled" value="1" id="ldap_enabled"
+                 {% if cfg.get('ldap_enabled','0') == '1' %}checked{% endif %}
+                 class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+          <label for="ldap_enabled" class="text-sm font-medium text-gray-700">Activer l'authentification LDAP/AD</label>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Serveur LDAP</label>
+            <input type="text" name="ldap_server" value="{{ cfg.get('ldap_server','') }}"
+                   placeholder="ad.entreprise.local"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Port</label>
+            <input type="number" name="ldap_port" value="{{ cfg.get('ldap_port','389') }}"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Domaine</label>
+            <input type="text" name="ldap_domain" value="{{ cfg.get('ldap_domain','') }}"
+                   placeholder="entreprise.local"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Base DN (optionnel)</label>
+            <input type="text" name="ldap_base_dn" value="{{ cfg.get('ldap_base_dn','') }}"
+                   placeholder="dc=entreprise,dc=local (auto si vide)"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Restreindre à l'OU (optionnel)</label>
+            <input type="text" name="ldap_allowed_ou" value="{{ cfg.get('ldap_allowed_ou','') }}"
+                   placeholder="OU=Informatique,DC=entreprise,DC=local"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Groupe requis (optionnel)</label>
+            <input type="text" name="ldap_allowed_group" value="{{ cfg.get('ldap_allowed_group','') }}"
+                   placeholder="GRP-PDC-Utilisateurs"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Rôle par défaut</label>
+            <select name="ldap_default_role" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500">
+              <option value="auditeur" {% if cfg.get('ldap_default_role','auditeur') == 'auditeur' %}selected{% endif %}>Auditeur</option>
+              <option value="responsable" {% if cfg.get('ldap_default_role') == 'responsable' %}selected{% endif %}>Responsable</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-3 pt-4">
+            <input type="checkbox" name="ldap_tls" value="1" id="ldap_tls"
+                   {% if cfg.get('ldap_tls','0') == '1' %}checked{% endif %}
+                   class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+            <label for="ldap_tls" class="text-sm text-gray-700">Utiliser TLS/SSL</label>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="submit" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
+            Sauvegarder
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- JIRA -->
+    <div x-show="tab === 'jira'" x-cloak class="bg-white rounded-xl shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="text-base font-semibold text-gray-800">Intégration JIRA</h2>
+        <p class="text-xs text-gray-400 mt-1">Création automatique de tickets lors de non-conformités</p>
+      </div>
+      <form method="post" action="/settings/jira" class="p-6 space-y-5">
+        <div class="flex items-center gap-3">
+          <input type="checkbox" name="jira_enabled" value="1" id="jira_enabled"
+                 {% if cfg.get('jira_enabled','0') == '1' %}checked{% endif %}
+                 class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+          <label for="jira_enabled" class="text-sm font-medium text-gray-700">Activer l'intégration JIRA</label>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-gray-600 mb-1">URL JIRA</label>
+            <input type="url" name="jira_url" value="{{ cfg.get('jira_url','') }}"
+                   placeholder="https://votreorg.atlassian.net"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Email du compte service</label>
+            <input type="email" name="jira_user_email" value="{{ cfg.get('jira_user_email','') }}"
+                   placeholder="service@entreprise.com"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Clé du projet JIRA</label>
+            <input type="text" name="jira_project_key" value="{{ cfg.get('jira_project_key','') }}"
+                   placeholder="SEC"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Token API JIRA</label>
+            <input type="password" name="jira_api_token" value="{{ cfg.get('jira_api_token','') }}"
+                   placeholder="Votre token API Atlassian"
+                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
+            <p class="text-xs text-gray-400 mt-1">Générer sur <em>id.atlassian.com &rarr; Security &rarr; API tokens</em></p>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="submit" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
+            Sauvegarder
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

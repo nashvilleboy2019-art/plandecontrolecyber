@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  plandecontrole:
+    build: .
+    ports:
+      - "8002:8002"
+    volumes:
+      - pdc_data:/app/data
+      - pdc_uploads:/app/static/uploads
+    restart: unless-stopped
+    environment:
+      - PDC_HOST=0.0.0.0
+      - PDC_PORT=8002
+      - PDC_RELOAD=false
+
+volumes:
+  pdc_data:
+  pdc_uploads:

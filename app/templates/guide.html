@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guide — Plan de Contrôle Cyber</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 text-sm">
+
+  <!-- Top bar -->
+  <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-lg">
+    <div class="flex items-center gap-3">
+      <svg class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+      </svg>
+      <div>
+        <span class="font-bold text-base tracking-tight">Plan de Contrôle Cyber</span>
+        <span class="text-slate-400 ml-3">Guide d'utilisation</span>
+      </div>
+    </div>
+    <a href="/login" class="text-slate-300 hover:text-white text-xs transition-colors">← Retour à la connexion</a>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-6 py-10 flex gap-10">
+
+    <!-- Sidebar TOC -->
+    <aside class="w-52 flex-shrink-0 hidden lg:block">
+      <div class="sticky top-24">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Sommaire</p>
+        <nav class="space-y-0.5 text-xs">
+          <a href="#installation" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Installation</a>
+          <a href="#demarrage" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Démarrage</a>
+          <a href="#roles" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Rôles et droits</a>
+          <a href="#controles" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Contrôles</a>
+          <a href="#planification" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Planification</a>
+          <a href="#guide-url" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Guide procédure</a>
+          <a href="#campagne" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Campagne mensuelle</a>
+          <a href="#resultats" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Résultats</a>
+          <a href="#statuts" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Statuts</a>
+          <a href="#incidents" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Incidents</a>
+          <a href="#clotures" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Clôtures</a>
+          <a href="#dashboard" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Tableau de bord</a>
+          <a href="#admin" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Administration</a>
+          <a href="#utilisateurs" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Utilisateurs</a>
+          <a href="#parametres" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Paramètres</a>
+          <a href="#jira" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ JIRA</a>
+          <a href="#activite" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Journal d'activité</a>
+          <a href="#faq" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">FAQ</a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="flex-1 min-w-0 space-y-12">
+
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Guide – Plan de Contrôle Cyber</h1>
+        <p class="text-gray-500 leading-relaxed">
+          Application de gestion du plan de contrôle cybersécurité. Ce guide couvre l'installation, les fonctionnalités et les procédures d'utilisation.
+        </p>
+      </div>
+
+      <!-- ─── INSTALLATION ─────────────────────────────────────────── -->
+      <section id="installation">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Installation</h2>
+        <div class="space-y-5">
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Prérequis</h3>
+            <ul class="list-disc list-inside text-gray-600 space-y-1">
+              <li>Python 3.10 ou supérieur</li>
+              <li>Accès Internet pour le premier lancement (CDN Tailwind CSS)</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">1. Installer les dépendances</h3>
+            <p class="text-gray-600 mb-2">Ouvrez un terminal dans le dossier <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">plandecontrole\</code> :</p>
+            <div class="bg-slate-800 text-emerald-300 rounded-lg p-4 font-mono text-xs">pip install -r requirements.txt</div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">2. Lancer l'application</h3>
+            <div class="bg-slate-800 text-emerald-300 rounded-lg p-4 font-mono text-xs">python run.py</div>
+            <p class="text-gray-500 text-xs mt-2">La base de données, les comptes par défaut et les référentiels sont créés automatiquement au premier lancement.</p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">3. Accéder à l'application</h3>
+            <p class="text-gray-600">Ouvrez votre navigateur sur <span class="font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs">http://127.0.0.1:8002</span></p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Variables d'environnement</h3>
+            <div class="overflow-hidden rounded-xl border border-gray-200">
+              <table class="w-full text-xs">
+                <thead><tr class="bg-gray-50 border-b"><th class="text-left px-4 py-2 font-medium text-gray-500">Variable</th><th class="text-left px-4 py-2 font-medium text-gray-500">Défaut</th><th class="text-left px-4 py-2 font-medium text-gray-500">Description</th></tr></thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr><td class="px-4 py-2 font-mono text-indigo-700">PDC_HOST</td><td class="px-4 py-2 text-gray-600">0.0.0.0</td><td class="px-4 py-2 text-gray-600">Interface d'écoute</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2 font-mono text-indigo-700">PDC_PORT</td><td class="px-4 py-2 text-gray-600">8002</td><td class="px-4 py-2 text-gray-600">Port HTTP</td></tr>
+                  <tr><td class="px-4 py-2 font-mono text-indigo-700">PDC_RELOAD</td><td class="px-4 py-2 text-gray-600">false</td><td class="px-4 py-2 text-gray-600">Rechargement automatique (dev)</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Charger des données de démonstration</h3>
+            <div class="bg-slate-800 text-emerald-300 rounded-lg p-4 font-mono text-xs">python seed_controls.py</div>
+            <p class="text-gray-500 text-xs mt-2">Insère 15 contrôles de démonstration répartis sur plusieurs thématiques.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── DÉMARRAGE ─────────────────────────────────────────────── -->
+      <section id="demarrage">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Premier démarrage</h2>
+
+        <div class="overflow-hidden rounded-xl border border-gray-200 mb-4">
+          <table class="w-full text-sm">
+            <thead><tr class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b">
+              <th class="text-left px-4 py-3 font-medium">Compte</th>
+              <th class="text-left px-4 py-3 font-medium">Mot de passe</th>
+              <th class="text-left px-4 py-3 font-medium">Rôle</th>
+              <th class="text-left px-4 py-3 font-medium">Droits</th>
+            </tr></thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr>
+                <td class="px-4 py-3 font-mono font-bold text-gray-900">admin</td>
+                <td class="px-4 py-3 font-mono text-gray-600">erwanbogosse2026</td>
+                <td class="px-4 py-3"><span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-medium">responsable</span></td>
+                <td class="px-4 py-3 text-gray-600 text-xs">Accès complet</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono font-bold text-gray-900">auditeur</td>
+                <td class="px-4 py-3 font-mono text-gray-600">audit123</td>
+                <td class="px-4 py-3"><span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">auditeur</span></td>
+                <td class="px-4 py-3 text-gray-600 text-xs">Saisie résultats, consultation</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-amber-700 text-xs bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+          ⚠ Changez les mots de passe par défaut dès la première connexion (Paramètres → Utilisateurs).
+        </p>
+      </section>
+
+      <!-- ─── RÔLES ──────────────────────────────────────────────────── -->
+      <section id="roles">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Rôles et droits</h2>
+        <div class="overflow-hidden rounded-xl border border-gray-200">
+          <table class="w-full text-sm">
+            <thead><tr class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b">
+              <th class="text-left px-4 py-3 font-medium">Action</th>
+              <th class="text-center px-4 py-3 font-medium">Auditeur</th>
+              <th class="text-center px-4 py-3 font-medium">Responsable</th>
+            </tr></thead>
+            <tbody class="divide-y divide-gray-100 text-xs">
+              <tr><td class="px-4 py-2.5 text-gray-700">Consulter les contrôles et résultats</td><td class="text-center text-emerald-600 font-bold">✓</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr class="bg-gray-50"><td class="px-4 py-2.5 text-gray-700">Modifier un contrôle</td><td class="text-center text-emerald-600 font-bold">✓</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr><td class="px-4 py-2.5 text-gray-700">Saisir un résultat</td><td class="text-center text-emerald-600 font-bold">✓</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr class="bg-gray-50"><td class="px-4 py-2.5 text-gray-700">Consulter le tableau de bord</td><td class="text-center text-emerald-600 font-bold">✓</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr><td class="px-4 py-2.5 text-gray-700">Exporter Excel</td><td class="text-center text-emerald-600 font-bold">✓</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr class="bg-gray-50"><td class="px-4 py-2.5 text-gray-700">Créer un contrôle</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr><td class="px-4 py-2.5 text-gray-700">Planifier l'année / assigner auditeurs</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr class="bg-gray-50"><td class="px-4 py-2.5 text-gray-700">Clôturer / rouvrir un résultat</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr><td class="px-4 py-2.5 text-gray-700">Ouvrir / résoudre un incident</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr class="bg-gray-50"><td class="px-4 py-2.5 text-gray-700">Archiver un contrôle</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr><td class="px-4 py-2.5 text-gray-700">Gérer les utilisateurs</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr class="bg-gray-50"><td class="px-4 py-2.5 text-gray-700">Administration (thématiques, catégories, périmètres)</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr><td class="px-4 py-2.5 text-gray-700">Paramètres (logo, thème, JIRA)</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ─── CONTRÔLES ─────────────────────────────────────────────── -->
+      <section id="controles">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Contrôles</h2>
+        <div class="space-y-5 text-gray-600">
+
+          <p>Un <strong>contrôle</strong> représente une vérification périodique à effectuer dans le cadre du plan de sécurité. Chaque contrôle a une fréquence, un taux cible et peut être assigné à un responsable.</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Champs d'un contrôle</h3>
+            <div class="overflow-hidden rounded-xl border border-gray-200">
+              <table class="w-full text-xs">
+                <tbody class="divide-y divide-gray-100">
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800 w-36">Référence</td><td class="px-4 py-2.5 text-gray-600">Identifiant unique (ex. <code class="bg-gray-100 px-1 rounded font-mono">ACC-001</code>)</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Libellé</td><td class="px-4 py-2.5 text-gray-600">Description courte du contrôle</td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Indicateur</td><td class="px-4 py-2.5 text-gray-600">Ce que l'on mesure (ex. nombre de comptes vérifiés)</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Objectif</td><td class="px-4 py-2.5 text-gray-600">Comment vérifier (procédure à suivre)</td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Fréquence</td><td class="px-4 py-2.5 text-gray-600">Mensuel · Bimestriel · Trimestriel · Semestriel · Annuel</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Taux cible</td><td class="px-4 py-2.5 text-gray-600">Seuil de conformité en % (défaut : 100%)</td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Thématique</td><td class="px-4 py-2.5 text-gray-600">Domaine fonctionnel (ex. Accès logique, Alertes…)</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Catégorie</td><td class="px-4 py-2.5 text-gray-600">Entité porteuse (ex. Entité 1, Entité 2)</td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Périmètre</td><td class="px-4 py-2.5 text-gray-600">Scope organisationnel (ex. SMSI, Tous)</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Responsable</td><td class="px-4 py-2.5 text-gray-600">Utilisateur responsable du contrôle</td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Guide / Procédure</td><td class="px-4 py-2.5 text-gray-600">Lien URL vers le document de procédure externe</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Fréquences et périodes générées</h3>
+            <div class="overflow-hidden rounded-xl border border-gray-200">
+              <table class="w-full text-xs">
+                <thead><tr class="bg-gray-50 border-b"><th class="text-left px-4 py-2 font-medium text-gray-500">Fréquence</th><th class="text-center px-4 py-2 font-medium text-gray-500">Périodes/an</th><th class="text-left px-4 py-2 font-medium text-gray-500">Exemples de labels</th></tr></thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr><td class="px-4 py-2 text-gray-800 font-medium">Mensuel</td><td class="px-4 py-2 text-center text-gray-600">12</td><td class="px-4 py-2 text-gray-600 font-mono">Jan 2026, Fév 2026…</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2 text-gray-800 font-medium">Bimestriel</td><td class="px-4 py-2 text-center text-gray-600">6</td><td class="px-4 py-2 text-gray-600 font-mono">Bim1 2026, Bim2 2026…</td></tr>
+                  <tr><td class="px-4 py-2 text-gray-800 font-medium">Trimestriel</td><td class="px-4 py-2 text-center text-gray-600">4</td><td class="px-4 py-2 text-gray-600 font-mono">T1 2026, T2 2026…</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2 text-gray-800 font-medium">Semestriel</td><td class="px-4 py-2 text-center text-gray-600">2</td><td class="px-4 py-2 text-gray-600 font-mono">S1 2026, S2 2026</td></tr>
+                  <tr><td class="px-4 py-2 text-gray-800 font-medium">Annuel</td><td class="px-4 py-2 text-center text-gray-600">1</td><td class="px-4 py-2 text-gray-600 font-mono">2026</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Archivage</h3>
+            <p>Un contrôle archivé disparaît de la liste principale et n'est plus suivi. L'archivage est réversible (bouton <strong>Restaurer</strong>). Tous les résultats et l'historique sont conservés.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── PLANIFICATION ─────────────────────────────────────────── -->
+      <section id="planification">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Planification annuelle</h2>
+        <div class="space-y-4 text-gray-600">
+          <p>La planification permet de créer à l'avance toutes les périodes d'un contrôle pour une année donnée, et d'assigner chaque période à un auditeur.</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Procédure</h3>
+            <ol class="list-decimal list-inside space-y-2">
+              <li>Ouvrir la fiche d'un contrôle</li>
+              <li>Cliquer sur <strong>Planifier l'année</strong></li>
+              <li>Sélectionner l'année à planifier (2024–2050)</li>
+              <li>Pour chaque période, choisir un auditeur dans le menu déroulant</li>
+              <li>Cliquer sur <strong>Enregistrer la planification</strong></li>
+            </ol>
+          </div>
+
+          <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-blue-800 text-xs space-y-1">
+            <p>Les périodes déjà clôturées ne peuvent pas être modifiées via la planification.</p>
+            <p>Si une période existe déjà, la planification met à jour uniquement l'assignation — aucun doublon n'est créé.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── GUIDE URL ──────────────────────────────────────────────── -->
+      <section id="guide-url">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Guide / Procédure</h2>
+        <div class="text-gray-600 space-y-3">
+          <p>Chaque contrôle peut référencer un lien URL vers sa procédure ou son guide opératoire (Confluence, SharePoint, PDF en ligne…).</p>
+          <p>Ce lien s'affiche dans la fiche du contrôle sous le libellé <strong>Guide / Procédure</strong> — il s'ouvre dans un nouvel onglet.</p>
+          <p class="text-xs text-gray-500">Renseignez l'URL complète (avec <code class="bg-gray-100 px-1 rounded font-mono">https://</code>) dans le formulaire de création ou de modification du contrôle.</p>
+        </div>
+      </section>
+
+      <!-- ─── CAMPAGNE ───────────────────────────────────────────────── -->
+      <section id="campagne">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Campagne mensuelle</h2>
+        <div class="space-y-4 text-gray-600">
+          <p>La page <strong>Campagne</strong> affiche la liste de tous les contrôles à réaliser pour un mois donné, quel que soit leur fréquence (un contrôle trimestriel apparaît uniquement lors de son mois de lancement).</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Fonctionnalités</h3>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Navigation mois par mois (← Aujourd'hui →)</li>
+              <li>Indicateurs de progression : total, non saisis, saisis, clôturés</li>
+              <li>Colonne <strong>Assigné à</strong> : le responsable peut affecter un auditeur directement depuis la liste (la sélection est sauvegardée instantanément)</li>
+              <li>Bouton <strong>Saisir</strong> pour accéder directement au formulaire de la période</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── RÉSULTATS ─────────────────────────────────────────────── -->
+      <section id="resultats">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Saisie des résultats</h2>
+        <div class="space-y-4 text-gray-600">
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Procédure de saisie</h3>
+            <ol class="list-decimal list-inside space-y-2">
+              <li>Ouvrir la fiche du contrôle ou passer par la page <strong>Campagne</strong></li>
+              <li>Cliquer sur <strong>Saisir</strong> (période "À faire") ou <strong>Modifier</strong></li>
+              <li>Saisir le taux de conformité (0–100%)</li>
+              <li>Le statut est calculé automatiquement : <em>Conforme</em> si taux ≥ taux cible, <em>Non conforme</em> sinon</li>
+              <li>Ajouter un commentaire si besoin, puis enregistrer</li>
+            </ol>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2" id="statuts">Statuts des résultats</h3>
+            <div class="overflow-hidden rounded-xl border border-gray-200">
+              <table class="w-full text-xs">
+                <tbody class="divide-y divide-gray-100">
+                  <tr><td class="px-4 py-2.5 w-40"><span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">À faire</span></td><td class="px-4 py-2.5 text-gray-600">Période planifiée mais aucun taux saisi</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5"><span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium">En attente</span></td><td class="px-4 py-2.5 text-gray-600">Taux saisi, en attente de clôture par le responsable</td></tr>
+                  <tr><td class="px-4 py-2.5"><span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">Conforme</span></td><td class="px-4 py-2.5 text-gray-600">Taux ≥ taux cible du contrôle</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5"><span class="px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-medium">Non conforme</span></td><td class="px-4 py-2.5 text-gray-600">Taux &lt; taux cible — action corrective requise</td></tr>
+                  <tr><td class="px-4 py-2.5"><span class="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full font-medium">⚠ Incident en cours</span></td><td class="px-4 py-2.5 text-gray-600">Incident ouvert suite à une non-conformité — en cours de traitement</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5"><span class="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">N/A</span></td><td class="px-4 py-2.5 text-gray-600">Contrôle non applicable pour cette période</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── INCIDENTS ─────────────────────────────────────────────── -->
+      <section id="incidents">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Gestion des incidents</h2>
+        <div class="space-y-4 text-gray-600">
+
+          <p>Lorsqu'un résultat est <strong>Non conforme</strong>, le responsable peut ouvrir un incident pour suivre la remédiation.</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Workflow</h3>
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 font-mono text-xs text-gray-700 space-y-1">
+              <div>Non conforme</div>
+              <div class="pl-4 text-gray-500">├─ <span class="text-orange-600">[Ouvrir incident]</span> → Incident en cours</div>
+              <div class="pl-8 text-gray-500">└─ <span class="text-green-600">[Incident résolu]</span> → Clôturé</div>
+              <div class="pl-4 text-gray-500">└─ <span class="text-green-600">[Clôturer quand même]</span> → Clôturé directement</div>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Ouvrir un incident</h3>
+            <ol class="list-decimal list-inside space-y-2">
+              <li>Sur la fiche du contrôle, cliquer sur <strong>⚠ Ouvrir incident</strong> (colonne Clôturé)</li>
+              <li>Dans la fenêtre modale, saisir un numéro d'incident existant (ex. <code class="bg-gray-100 px-1 rounded font-mono text-xs">INC-2026-042</code>) — optionnel</li>
+              <li>Si JIRA est configuré, cocher <strong>Pousser un ticket JIRA</strong> pour créer automatiquement un ticket</li>
+              <li>Cliquer sur <strong>Ouvrir l'incident</strong></li>
+            </ol>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">N° Incident</h3>
+            <p>Une fois l'incident ouvert, le numéro de référence s'affiche dans la colonne <strong>N° Incident</strong>. Si le numéro n'a pas été saisi lors de l'ouverture, un bouton <em>+ Ajouter N°</em> permet de le renseigner ultérieurement.</p>
+          </div>
+
+          <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-blue-800 text-xs">
+            Un incident peut être lié à un numéro manuel ET à un ticket JIRA simultanément.
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── CLÔTURES ───────────────────────────────────────────────── -->
+      <section id="clotures">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Clôtures</h2>
+        <div class="space-y-4 text-gray-600">
+          <p>La page <strong>Clôtures</strong> (menu principal) liste tous les résultats saisis mais non encore clôturés par un responsable.</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Clôturer depuis la fiche contrôle</h3>
+            <p>Sur la fiche d'un contrôle, dans la colonne <strong>Clôturé</strong> :</p>
+            <ul class="list-disc list-inside space-y-1 mt-1">
+              <li>Résultat conforme ou N/A → bouton <strong>Clôturer</strong></li>
+              <li>Non conforme → bouton <strong>⚠ Ouvrir incident</strong> ou <strong>Clôturer quand même</strong></li>
+              <li>Incident en cours → bouton <strong>✓ Incident résolu</strong></li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Rouvrir une clôture</h3>
+            <p>Un résultat clôturé peut être rouvert par un responsable via le bouton <strong>Rouvrir</strong>. Cela annule la clôture et permet une nouvelle saisie ou révision.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── DASHBOARD ─────────────────────────────────────────────── -->
+      <section id="dashboard">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Tableau de bord</h2>
+        <div class="space-y-4 text-gray-600">
+          <p>Le tableau de bord offre une vue synthétique du plan de contrôle pour une année sélectionnable. Seules les années ayant au moins un résultat sont proposées dans le sélecteur.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+              <h3 class="font-semibold text-gray-800 mb-2 text-sm">Indicateurs (KPIs)</h3>
+              <ul class="text-xs space-y-1 text-gray-600">
+                <li>• Total contrôles actifs</li>
+                <li>• Conformes / Non conformes</li>
+                <li>• Sans résultat (non saisis)</li>
+                <li>• En retard</li>
+                <li>• À clôturer (en attente de validation)</li>
+              </ul>
+            </div>
+            <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+              <h3 class="font-semibold text-gray-800 mb-2 text-sm">Graphiques</h3>
+              <ul class="text-xs space-y-1 text-gray-600">
+                <li>• Conformité par thématique (barres)</li>
+                <li>• Conformité par catégorie (barres horizontales)</li>
+                <li>• Conformité par périmètre (barres)</li>
+                <li>• Tendance mensuelle (courbe)</li>
+                <li>• Réalisation par catégorie/mois (barres empilées)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Code couleur</h3>
+            <div class="flex flex-wrap gap-3">
+              <span class="flex items-center gap-1.5 text-xs"><span class="w-3 h-3 rounded-sm bg-green-500 inline-block"></span>Conforme ≥ 90 %</span>
+              <span class="flex items-center gap-1.5 text-xs"><span class="w-3 h-3 rounded-sm bg-yellow-400 inline-block"></span>Partiel 70–89 %</span>
+              <span class="flex items-center gap-1.5 text-xs"><span class="w-3 h-3 rounded-sm bg-red-500 inline-block"></span>Non conforme &lt; 70 %</span>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Export Excel</h3>
+            <p>Le bouton <strong>Exporter Excel</strong> génère un fichier <code class="bg-gray-100 px-1 rounded font-mono text-xs">.xlsx</code> contenant : résumé global, conformité par thématique, tendance mensuelle, liste des contrôles en retard et détail de tous les contrôles.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── ADMINISTRATION ─────────────────────────────────────────── -->
+      <section id="admin">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Administration</h2>
+        <div class="text-gray-600 space-y-3">
+          <p>Accessible depuis le menu <strong>Admin</strong> (rôle responsable uniquement). Permet de gérer les trois référentiels utilisés dans les contrôles.</p>
+          <div class="overflow-hidden rounded-xl border border-gray-200">
+            <table class="w-full text-xs">
+              <thead><tr class="bg-gray-50 border-b"><th class="text-left px-4 py-2 font-medium text-gray-500">Référentiel</th><th class="text-left px-4 py-2 font-medium text-gray-500">Description</th><th class="text-left px-4 py-2 font-medium text-gray-500">Exemples</th></tr></thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr><td class="px-4 py-2.5 font-medium text-gray-800">Thématiques</td><td class="px-4 py-2.5 text-gray-600">Domaine fonctionnel du contrôle — avec code couleur</td><td class="px-4 py-2.5 text-gray-500 font-mono">Accès logique, Alertes, Audit de config…</td></tr>
+                <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Catégories</td><td class="px-4 py-2.5 text-gray-600">Entité porteuse du contrôle</td><td class="px-4 py-2.5 text-gray-500 font-mono">Entité 1, Entité 2</td></tr>
+                <tr><td class="px-4 py-2.5 font-medium text-gray-800">Périmètres</td><td class="px-4 py-2.5 text-gray-600">Scope organisationnel ou technique</td><td class="px-4 py-2.5 text-gray-500 font-mono">SMSI, Tous</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-gray-500">Un référentiel utilisé par au moins un contrôle ne peut pas être supprimé — il peut seulement être désactivé.</p>
+        </div>
+      </section>
+
+      <!-- ─── UTILISATEURS ──────────────────────────────────────────── -->
+      <section id="utilisateurs">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Gestion des utilisateurs</h2>
+        <div class="space-y-4 text-gray-600">
+          <p>Accessible via l'icône <strong>Utilisateurs</strong> en haut à droite de la navbar (responsable uniquement).</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Créer un compte</h3>
+            <ol class="list-decimal list-inside space-y-1">
+              <li>Cliquer sur <strong>Nouveau compte</strong></li>
+              <li>Renseigner le nom d'utilisateur, le nom complet, l'email et le mot de passe</li>
+              <li>Choisir le rôle : <em>Auditeur</em> ou <em>Responsable</em></li>
+            </ol>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Modifier un compte</h3>
+            <p>Le mot de passe peut être laissé vide pour le conserver inchangé. Seul le dernier responsable ne peut pas être rétrogradé.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── PARAMÈTRES ─────────────────────────────────────────────── -->
+      <section id="parametres">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Paramètres</h2>
+        <div class="space-y-5 text-gray-600">
+          <p>Accessible via l'icône engrenage en haut à droite (responsable uniquement).</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Logo société</h3>
+            <p>Déposez un logo (PNG, JPG, SVG, WEBP — max 2 Mo). Il s'affichera dans la navbar.</p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Thème couleurs</h3>
+            <p>Choisissez parmi 10 palettes de couleurs (Indigo, Blue, Teal, Emerald, Sky, Purple, Rose, Orange, Amber, Slate). La couleur s'applique à la navbar, aux boutons et aux éléments actifs.</p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Alertes</h3>
+            <p>Configurez les seuils d'alerte :</p>
+            <ul class="list-disc list-inside space-y-1 mt-1">
+              <li><strong>Jours d'avertissement</strong> — délai avant la fin de la période où une alerte jaune apparaît</li>
+              <li><strong>Jours de tolérance</strong> — délai après la fin de la période avant qu'une alerte rouge (retard) soit déclenchée</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── JIRA ───────────────────────────────────────────────────── -->
+      <section id="jira">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Intégration JIRA</h2>
+        <div class="space-y-4 text-gray-600">
+          <p>Lorsque JIRA est configuré, l'ouverture d'un incident sur un résultat non conforme peut créer automatiquement un ticket dans votre projet JIRA (API REST v3 — JIRA Cloud).</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Configuration (Paramètres → JIRA)</h3>
+            <div class="overflow-hidden rounded-xl border border-gray-200">
+              <table class="w-full text-xs">
+                <tbody class="divide-y divide-gray-100">
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800 w-40">URL JIRA</td><td class="px-4 py-2.5 text-gray-600">Ex. <code class="bg-gray-100 px-1 rounded font-mono">https://monentite.atlassian.net</code></td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Email utilisateur</td><td class="px-4 py-2.5 text-gray-600">Compte de service JIRA</td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Token API</td><td class="px-4 py-2.5 text-gray-600">Généré depuis votre profil Atlassian (<em>Sécurité → Tokens API</em>)</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Clé projet</td><td class="px-4 py-2.5 text-gray-600">Ex. <code class="bg-gray-100 px-1 rounded font-mono">SEC</code> — visible dans les paramètres du projet JIRA</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-blue-800 text-xs">
+            Le ticket créé contient le libellé du contrôle, la période, le taux de conformité et le commentaire. Il est de type <em>Task</em> dans le projet configuré.
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── JOURNAL ────────────────────────────────────────────────── -->
+      <section id="activite">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Journal d'activité</h2>
+        <div class="text-gray-600 space-y-3">
+          <p>Accessible depuis le menu <strong>Activité</strong>. Toutes les actions sont tracées automatiquement : créations, modifications, saisies de résultats, validations, ouvertures d'incidents, connexions.</p>
+          <p>La colonne <strong>Ressource</strong> affiche un lien cliquable vers le contrôle concerné. Les entrées sont paginées (50 par page).</p>
+        </div>
+      </section>
+
+      <!-- ─── FAQ ────────────────────────────────────────────────────── -->
+      <section id="faq">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">FAQ</h2>
+        <div class="space-y-3" x-data="{ open: null }">
+
+          {% set faq = [
+            ("Où sont stockées les données ?",
+             "Dans un fichier SQLite local : data/plandecontrole.db. Ce fichier contient toutes les données et peut être sauvegardé comme n'importe quel fichier. Copiez-le régulièrement pour vos sauvegardes."),
+            ("Comment modifier le port d'écoute ?",
+             "Définissez la variable d'environnement PDC_PORT avant de lancer le serveur. Exemple Windows : set PDC_PORT=8080 && python run.py"),
+            ("Peut-on avoir deux résultats pour la même période ?",
+             "Non — l'application interdit les doublons par une contrainte unique (contrôle + année + mois). Si un résultat existe déjà, la saisie le met à jour plutôt que d'en créer un nouveau."),
+            ("Que se passe-t-il si je planifie une année déjà planifiée ?",
+             "Les périodes existantes sont conservées — seule l'assignation de l'auditeur est mise à jour. Aucun doublon n'est créé."),
+            ("Puis-je modifier un résultat déjà clôturé ?",
+             "Oui, mais il faut d'abord le rouvrir (bouton Rouvrir, responsable uniquement). La clôture est alors annulée et le résultat peut être modifié ou resaisi."),
+            ("Comment changer un mot de passe utilisateur ?",
+             "Via Utilisateurs (icône en haut à droite) : cliquer sur Modifier à côté du compte, renseigner le nouveau mot de passe et valider. Laisser le champ vide pour le conserver sans changement."),
+            ("Mon ticket JIRA n'est pas créé, que vérifier ?",
+             "1) Vérifiez que JIRA est activé dans Paramètres → JIRA. 2) Contrôlez l'URL (avec https://), l'email, le token API et la clé du projet. 3) Assurez-vous que le compte de service a les droits de création de tickets dans le projet JIRA. Les erreurs de création sont ignorées silencieusement pour ne pas bloquer la saisie."),
+            ("Comment rendre l'application accessible depuis d'autres postes ?",
+             "La variable PDC_HOST est déjà à 0.0.0.0 par défaut — l'application est accessible sur le réseau local via http://[IP_DU_SERVEUR]:8002. Assurez-vous que le pare-feu autorise le port 8002."),
+            ("Que faire si l'application ne démarre pas ?",
+             "Vérifiez que Python 3.10+ est installé et que les dépendances sont installées (pip install -r requirements.txt). Si le port 8002 est occupé, changez-le avec PDC_PORT. Consultez la console pour le message d'erreur exact."),
+            ("Peut-on supprimer une thématique utilisée par des contrôles ?",
+             "Non — la suppression est bloquée si la thématique est associée à au moins un contrôle. Vous pouvez la désactiver (bouton Inactif dans Admin) pour qu'elle n'apparaisse plus dans les formulaires tout en conservant les données existantes."),
+            ("Comment exporter les données ?",
+             "Le tableau de bord propose un bouton Exporter Excel qui génère un fichier .xlsx complet avec résumé, conformité par thématique, tendance mensuelle et liste de tous les contrôles pour l'année sélectionnée.")
+          ] %}
+
+          {% for question, reponse in faq %}
+          <div class="border border-gray-200 rounded-xl overflow-hidden">
+            <button @click="open = open === {{ loop.index }} ? null : {{ loop.index }}"
+                    class="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+              <span class="font-medium text-gray-800 text-sm">{{ question }}</span>
+              <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200"
+                   :class="open === {{ loop.index }} ? 'rotate-180' : ''"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div x-show="open === {{ loop.index }}" x-transition
+                 class="px-4 pb-4 text-gray-600 border-t border-gray-100 pt-3 text-xs leading-relaxed">
+              {{ reponse }}
+            </div>
+          </div>
+          {% endfor %}
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+</body>
+</html>

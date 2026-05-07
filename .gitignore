@@ -1,0 +1,44 @@
+# Claude Code
+.claude/
+
+# Base de données
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Uploads utilisateur
+static/uploads/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Logs
+*.log
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

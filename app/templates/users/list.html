@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Utilisateurs – Plan de Contrôle Cyber{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Utilisateurs</h1>
+    <p class="text-gray-500 text-sm mt-1">{{ users|length }} utilisateur{{ 's' if users|length != 1 }}</p>
+  </div>
+  <a href="/users/new"
+     class="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    Nouvel utilisateur
+  </a>
+</div>
+
+{% if flash %}
+<div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{{ flash }}</div>
+{% endif %}
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 border-b border-gray-200">
+      <tr>
+        <th class="text-left px-4 py-3 font-semibold text-gray-600">Utilisateur</th>
+        <th class="text-center px-4 py-3 font-semibold text-gray-600">Rôle</th>
+        <th class="text-left px-4 py-3 font-semibold text-gray-600">Email</th>
+        <th class="text-center px-4 py-3 font-semibold text-gray-600">Statut</th>
+        <th class="text-center px-4 py-3 font-semibold text-gray-600">Créé le</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for u in users %}
+      <tr class="hover:bg-gray-50 {% if not u.active %}opacity-60{% endif %}">
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
+                        {% if u.role == 'responsable' %}bg-primary-100 text-primary-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+              {{ u.username[0]|upper }}
+            </div>
+            <div>
+              <p class="font-medium text-gray-800">{{ u.username }}</p>
+              {% if u.nom_complet %}<p class="text-xs text-gray-400">{{ u.nom_complet }}</p>{% endif %}
+            </div>
+          </div>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full
+                       {% if u.role == 'responsable' %}bg-primary-100 text-primary-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+            {{ u.role }}
+          </span>
+        </td>
+        <td class="px-4 py-3 text-gray-500">{{ u.email or '—' }}</td>
+        <td class="px-4 py-3 text-center">
+          {% if u.active %}
+            <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Actif</span>
+          {% else %}
+            <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Inactif</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-center text-gray-400 text-xs">
+          {{ u.created_at.strftime('%d/%m/%Y') if u.created_at else '—' }}
+        </td>
+        <td class="px-4 py-3 text-right">
+          <div class="flex items-center gap-2 justify-end">
+            <a href="/users/{{ u.id }}/edit"
+               class="text-xs text-primary-600 hover:text-primary-700 px-2 py-1 border border-primary-200 rounded hover:border-primary-400 transition-colors">
+              Modifier
+            </a>
+            {% if u.id != user.id and u.active %}
+            <form method="post" action="/users/{{ u.id }}/delete"
+                  onsubmit="return confirm('Désactiver cet utilisateur ?')">
+              <button type="submit" class="text-xs text-red-600 hover:text-red-700 px-2 py-1 border border-red-200 rounded hover:border-red-400 transition-colors">
+                Désactiver
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

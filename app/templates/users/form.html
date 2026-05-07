@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{% if edit_user %}Modifier{% else %}Nouvel{% endif %} utilisateur{% endblock %}
+{% block content %}
+
+<div class="max-w-lg">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/users" class="text-gray-400 hover:text-gray-600 transition-colors">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900">
+      {% if edit_user %}Modifier l'utilisateur{% else %}Nouvel utilisateur{% endif %}
+    </h1>
+  </div>
+
+  {% if error %}
+  <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="{% if edit_user %}/users/{{ edit_user.id }}/edit{% else %}/users/new{% endif %}"
+        class="bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-100">
+
+    <div class="p-6 space-y-5">
+      {% if not edit_user %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Identifiant <span class="text-red-500">*</span>
+        </label>
+        <input type="text" name="username" required placeholder="ex. j.dupont"
+               class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+        <p class="text-xs text-gray-400 mt-1">Identifiant de connexion (non modifiable après création)</p>
+      </div>
+      {% else %}
+      <div>
+        <p class="text-xs text-gray-500 uppercase font-medium mb-1">Identifiant</p>
+        <p class="text-base font-semibold text-gray-800">{{ edit_user.username }}</p>
+      </div>
+      {% endif %}
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
+        <input type="text" name="nom_complet"
+               value="{{ edit_user.nom_complet if edit_user else '' }}"
+               placeholder="ex. Jean Dupont"
+               class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input type="email" name="email"
+               value="{{ edit_user.email if edit_user else '' }}"
+               placeholder="jean.dupont@entreprise.fr"
+               class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Rôle <span class="text-red-500">*</span>
+        </label>
+        <select name="role"
+                class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+          <option value="auditeur" {% if edit_user and edit_user.role == 'auditeur' %}selected{% endif %}>
+            Auditeur — consultation et saisie de résultats
+          </option>
+          <option value="responsable" {% if edit_user and edit_user.role == 'responsable' %}selected{% endif %}>
+            Responsable — administration et validation
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Mot de passe {% if not edit_user %}<span class="text-red-500">*</span>{% endif %}
+        </label>
+        <input type="password" name="password"
+               {% if not edit_user %}required{% endif %}
+               placeholder="{% if edit_user %}Laisser vide pour conserver{% else %}Mot de passe initial{% endif %}"
+               class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+      </div>
+
+      {% if edit_user %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+        <select name="active"
+                class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+          <option value="1" {% if edit_user.active %}selected{% endif %}>Actif</option>
+          <option value="0" {% if not edit_user.active %}selected{% endif %}>Inactif</option>
+        </select>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="p-6 flex justify-end gap-3">
+      <a href="/users"
+         class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+        Annuler
+      </a>
+      <button type="submit"
+              class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
+        {% if edit_user %}Enregistrer{% else %}Créer l'utilisateur{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

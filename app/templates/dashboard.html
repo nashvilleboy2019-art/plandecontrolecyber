@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – Plan de Contrôle Cyber{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Tableau de bord</h1>
+    <p class="text-gray-500 text-sm mt-1">Vue d'ensemble du plan de contrôle cyber</p>
+  </div>
+  <div class="flex items-center gap-3">
+    <!-- Year selector -->
+    <form method="get" action="/dashboard" class="flex items-center gap-2">
+      <select name="year" onchange="this.form.submit()"
+              class="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+        {% for y in available_years %}
+          <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <a href="/dashboard/export?year={{ current_year }}"
+       class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Exporter Excel
+    </a>
+  </div>
+</div>
+
+<!-- KPI cards -->
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+  {% set kpis = [
+    ('Total contrôles', stats.total, 'text-gray-700', 'bg-gray-100', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'),
+    ('Conformes', stats.compliant, 'text-green-700', 'bg-green-50 border border-green-200', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0'),
+    ('Non conformes', stats.non_compliant, 'text-red-700', 'bg-red-50 border border-red-200', 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0'),
+    ('Sans résultat', stats.pending, 'text-yellow-700', 'bg-yellow-50 border border-yellow-200', 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0'),
+    ('En retard', stats.overdue|length, 'text-orange-700', 'bg-orange-50 border border-orange-200', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0'),
+    ('À valider', stats.unvalidated, 'text-purple-700', 'bg-purple-50 border border-purple-200', 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'),
+  ] %}
+  {% for label, val, text_cls, bg_cls, icon_path in kpis %}
+  <div class="rounded-xl p-4 {{ bg_cls }}">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ label }}</p>
+        <p class="text-3xl font-bold {{ text_cls }} mt-1">{{ val }}</p>
+      </div>
+      <svg class="h-6 w-6 {{ text_cls }} opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}"/>
+      </svg>
+    </div>
+    {% if label == 'Conformes' and stats.total > 0 %}
+      <div class="mt-2 w-full bg-green-200 rounded-full h-1.5">
+        <div class="bg-green-600 h-1.5 rounded-full" style="width: {{ (stats.compliant / stats.total * 100)|round }}%"></div>
+      </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Global rate banner -->
+{% if stats.compliance_rate is not none %}
+<div class="mb-8 rounded-xl p-5 {% if stats.compliance_rate >= 90 %}bg-green-600{% elif stats.compliance_rate >= 70 %}bg-yellow-500{% else %}bg-red-600{% endif %} text-white flex items-center justify-between">
+  <div>
+    <p class="text-sm font-medium opacity-90">Taux de conformité global – {{ current_year }}</p>
+    <p class="text-4xl font-bold mt-1">{{ stats.compliance_rate }}%</p>
+  </div>
+  <div class="text-6xl font-bold opacity-20">%</div>
+</div>
+{% endif %}
+
+<!-- Color legend -->
+<div class="flex items-center gap-4 mb-6 text-xs text-gray-500">
+  <span class="font-medium text-gray-600">Légende :</span>
+  <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-green-500 inline-block"></span>Conforme ≥ 90 %</span>
+  <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-yellow-400 inline-block"></span>Partiel 70–89 %</span>
+  <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-red-500 inline-block"></span>Non conforme &lt; 70 %</span>
+  <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-gray-300 inline-block"></span>Aucune donnée</span>
+</div>
+
+<!-- Charts row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  <!-- By type -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+    <h2 class="text-base font-semibold text-gray-800 mb-4">Conformité par thématique</h2>
+    <div class="h-64">
+      <canvas id="chartByType"></canvas>
+    </div>
+  </div>
+
+  <!-- Monthly trend -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+    <h2 class="text-base font-semibold text-gray-800 mb-4">Tendance mensuelle – {{ current_year }}</h2>
+    <div class="h-64">
+      <canvas id="chartMonthly"></canvas>
+    </div>
+  </div>
+
+  <!-- By category -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+    <h2 class="text-base font-semibold text-gray-800 mb-4">Conformité par catégorie (entité)</h2>
+    <div class="h-48">
+      <canvas id="chartByCategory"></canvas>
+    </div>
+  </div>
+
+  <!-- By perimeter -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+    <h2 class="text-base font-semibold text-gray-800 mb-4">Conformité par périmètre</h2>
+    <canvas id="chartByPerimetre" class="max-h-48"></canvas>
+  </div>
+</div>
+
+<!-- Monthly completion by category -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-8">
+  <h2 class="text-base font-semibold text-gray-800 mb-4">
+    Réalisation des contrôles par catégorie – {{ current_year }}
+    <span class="text-xs font-normal text-gray-400 ml-2">Réalisés vs non effectués par mois</span>
+  </h2>
+  <div class="h-72">
+    <canvas id="chartCatMonthly"></canvas>
+  </div>
+</div>
+
+<!-- Alerts & warnings -->
+<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+
+  {% if stats.overdue %}
+  <div class="bg-white rounded-xl shadow-sm border border-red-200 p-5">
+    <h2 class="text-base font-semibold text-red-700 mb-4 flex items-center gap-2">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0"/>
+      </svg>
+      Contrôles en retard ({{ stats.overdue|length }})
+    </h2>
+    <div class="space-y-2 max-h-64 overflow-y-auto">
+      {% for c in stats.overdue %}
+      <a href="/controls/{{ c.id }}"
+         class="flex items-center justify-between px-3 py-2 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+        <div>
+          <span class="text-sm font-medium text-red-800">{{ c.reference }}</span>
+          <span class="text-xs text-red-600 ml-2">{{ c.libelle[:45] }}{% if c.libelle|length > 45 %}…{% endif %}</span>
+        </div>
+        <span class="text-xs bg-red-200 text-red-800 px-2 py-0.5 rounded-full">{{ c.frequence }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="bg-white rounded-xl shadow-sm border border-orange-200 p-5">
+    <h2 class="text-base font-semibold text-orange-700 mb-4 flex items-center gap-2">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+      </svg>
+      Incidents en cours ({{ incidents_en_cours|length }})
+    </h2>
+    {% if incidents_en_cours %}
+    <div class="space-y-2 max-h-64 overflow-y-auto">
+      {% for inc in incidents_en_cours %}
+      <a href="/controls/{{ inc.control_id }}"
+         class="flex items-start justify-between px-3 py-2 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors gap-2">
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-sm font-medium text-orange-800 shrink-0">{{ inc.control.reference }}</span>
+            <span class="text-xs text-orange-600 truncate">{{ inc.control.libelle[:40] }}{% if inc.control.libelle|length > 40 %}…{% endif %}</span>
+          </div>
+          <div class="flex items-center gap-1.5 mt-0.5">
+            <span class="text-xs text-orange-400">{{ inc._period_label }}</span>
+            {% if inc.incident_ref %}
+              <span class="text-xs bg-orange-200 text-orange-800 px-1.5 py-0.5 rounded font-mono">{{ inc.incident_ref }}</span>
+            {% endif %}
+            {% if inc.jira_ticket %}
+              <span class="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">{{ inc.jira_ticket }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center h-24 text-gray-400 text-sm gap-2">
+      <svg class="h-8 w-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0"/>
+      </svg>
+      Aucun incident en cours
+    </div>
+    {% endif %}
+  </div>
+
+  {% if stats.warnings %}
+  <div class="bg-white rounded-xl shadow-sm border border-yellow-200 p-5">
+    <h2 class="text-base font-semibold text-yellow-700 mb-4 flex items-center gap-2">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+      Échéance proche – &lt; 7 j ({{ stats.warnings|length }})
+    </h2>
+    <div class="space-y-2 max-h-64 overflow-y-auto">
+      {% for c in stats.warnings %}
+      <a href="/controls/{{ c.id }}"
+         class="flex items-center justify-between px-3 py-2 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors">
+        <div>
+          <span class="text-sm font-medium text-yellow-800">{{ c.reference }}</span>
+          <span class="text-xs text-yellow-600 ml-2">{{ c.libelle[:45] }}{% if c.libelle|length > 45 %}…{% endif %}</span>
+        </div>
+        <span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">{{ c.frequence }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{% macro rate_badge(avg) %}
+  {% if avg is not none %}
+    {% if avg >= 90 %}
+      <span class="inline-flex items-center gap-1 text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>{{ avg|round(1) }}%
+      </span>
+    {% elif avg >= 70 %}
+      <span class="inline-flex items-center gap-1 text-xs font-bold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">
+        <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block"></span>{{ avg|round(1) }}%
+      </span>
+    {% else %}
+      <span class="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+        <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>{{ avg|round(1) }}%
+      </span>
+    {% endif %}
+  {% else %}
+    <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">—</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro rate_bar(avg) %}
+  {% if avg is not none %}
+  <div class="w-full bg-gray-200 rounded-full h-2">
+    <div class="h-2 rounded-full {% if avg >= 90 %}bg-green-500{% elif avg >= 70 %}bg-yellow-400{% else %}bg-red-500{% endif %}"
+         style="width: {{ [avg, 100]|min }}%"></div>
+  </div>
+  {% endif %}
+{% endmacro %}
+
+<!-- Detail tables -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+  <!-- By type -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 bg-gray-50">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Thématiques</h2>
+    </div>
+    <div class="divide-y divide-gray-100">
+      {% for t in stats.by_type %}
+      <div class="px-4 py-3 flex items-center gap-3
+                  {% if t.avg is not none %}
+                    {% if t.avg >= 90 %}bg-green-50/40{% elif t.avg >= 70 %}bg-yellow-50/40{% else %}bg-red-50/40{% endif %}
+                  {% endif %}">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-medium text-gray-800 truncate">{{ t.label }}</span>
+            {{ rate_badge(t.avg) }}
+          </div>
+          {{ rate_bar(t.avg) }}
+        </div>
+        <span class="text-xs text-gray-400 flex-shrink-0">{{ t.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- By category -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 bg-gray-50">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Catégories</h2>
+    </div>
+    <div class="divide-y divide-gray-100">
+      {% for cat in stats.by_category %}
+      <div class="px-4 py-3 flex items-center gap-3
+                  {% if cat.avg is not none %}
+                    {% if cat.avg >= 90 %}bg-green-50/40{% elif cat.avg >= 70 %}bg-yellow-50/40{% else %}bg-red-50/40{% endif %}
+                  {% endif %}">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-medium text-gray-800 truncate">{{ cat.label }}</span>
+            {{ rate_badge(cat.avg) }}
+          </div>
+          {{ rate_bar(cat.avg) }}
+        </div>
+        <span class="text-xs text-gray-400 flex-shrink-0">{{ cat.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- By perimeter -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 bg-gray-50">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Périmètres</h2>
+    </div>
+    <div class="divide-y divide-gray-100">
+      {% for p in stats.by_perimetre %}
+      <div class="px-4 py-3 flex items-center gap-3
+                  {% if p.avg is not none %}
+                    {% if p.avg >= 90 %}bg-green-50/40{% elif p.avg >= 70 %}bg-yellow-50/40{% else %}bg-red-50/40{% endif %}
+                  {% endif %}">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-medium text-gray-800 truncate">{{ p.label }}</span>
+            {{ rate_badge(p.avg) }}
+          </div>
+          {{ rate_bar(p.avg) }}
+        </div>
+        <span class="text-xs text-gray-400 flex-shrink-0">{{ p.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const MOIS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+  // Color based on conformity rate
+  function rateColor(v, alpha) {
+    if (v === null || v === undefined) return alpha ? 'rgba(209,213,219,' + alpha + ')' : '#d1d5db';
+    if (v >= 90) return alpha ? 'rgba(34,197,94,' + alpha + ')' : '#22c55e';
+    if (v >= 70) return alpha ? 'rgba(234,179,8,' + alpha + ')' : '#eab308';
+    return alpha ? 'rgba(239,68,68,' + alpha + ')' : '#ef4444';
+  }
+  function rateBorder(v) {
+    if (v === null || v === undefined) return '#9ca3af';
+    if (v >= 90) return '#16a34a';
+    if (v >= 70) return '#ca8a04';
+    return '#dc2626';
+  }
+
+  // Chart by type — colored by rate
+  const typeData = {{ stats.by_type | map(attribute='avg') | list | tojson }};
+  new Chart(document.getElementById('chartByType'), {
+    type: 'bar',
+    data: {
+      labels: {{ stats.by_type | map(attribute='label') | list | tojson }},
+      datasets: [{
+        label: 'Taux moyen (%)',
+        data: typeData,
+        backgroundColor: typeData.map(v => rateColor(v, 0.8)),
+        borderColor: typeData.map(v => rateBorder(v)),
+        borderWidth: 1.5,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : 'N/A' } },
+      },
+      scales: {
+        y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#f3f4f6' } },
+        x: { ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+
+  // Monthly trend — gradient fill + colored points
+  const monthlyData = {{ stats.monthly | map(attribute='avg') | list | tojson }};
+  const monthlyCtx = document.getElementById('chartMonthly').getContext('2d');
+  const gradient = monthlyCtx.createLinearGradient(0, 0, 0, 250);
+  gradient.addColorStop(0, 'rgba(79,70,229,0.25)');
+  gradient.addColorStop(1, 'rgba(79,70,229,0.01)');
+  new Chart(monthlyCtx, {
+    type: 'line',
+    data: {
+      labels: MOIS,
+      datasets: [{
+        label: 'Taux conformité (%)',
+        data: monthlyData,
+        borderColor: '#4f46e5',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: monthlyData.map(v => rateColor(v)),
+        pointBorderColor: monthlyData.map(v => rateBorder(v)),
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : 'Aucune donnée' } },
+      },
+      scales: {
+        y: {
+          min: 0, max: 100,
+          ticks: { callback: v => v + '%' },
+          grid: { color: '#f3f4f6' },
+        }
+      }
+    }
+  });
+
+  // By category — horizontal bar colored by rate
+  const catData = {{ stats.by_category | map(attribute='avg') | list | tojson }};
+  new Chart(document.getElementById('chartByCategory'), {
+    type: 'bar',
+    data: {
+      labels: {{ stats.by_category | map(attribute='label') | list | tojson }},
+      datasets: [{
+        label: 'Taux moyen (%)',
+        data: catData,
+        backgroundColor: catData.map(v => rateColor(v, 0.8)),
+        borderColor: catData.map(v => rateBorder(v)),
+        borderWidth: 1.5,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.x !== null ? ctx.parsed.x.toFixed(1) + '%' : 'N/A' } },
+      },
+      scales: {
+        x: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#f3f4f6' } },
+        y: { ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+
+  // Monthly completion by category (stacked bar)
+  const catDone = {{ stats.cat_monthly_done | tojson }};
+  const catTodo = {{ stats.cat_monthly_todo | tojson }};
+  const catPalette = ['#6366f1','#06b6d4','#10b981','#f59e0b','#ef4444','#a855f7','#f97316'];
+  const catPaletteFade = ['#e0e7ff','#cffafe','#d1fae5','#fef3c7','#fee2e2','#f3e8ff','#ffedd5'];
+  const catDatasets = [];
+  catDone.forEach((cat, i) => {
+    catDatasets.push({
+      label: cat.label + ' – Réalisés',
+      data: cat.data,
+      backgroundColor: catPalette[i % catPalette.length],
+      stack: cat.label,
+      borderRadius: 3,
+    });
+  });
+  catTodo.forEach((cat, i) => {
+    catDatasets.push({
+      label: cat.label + ' – Non effectués',
+      data: cat.data,
+      backgroundColor: catPaletteFade[i % catPaletteFade.length],
+      stack: cat.label,
+      borderRadius: 3,
+    });
+  });
+  new Chart(document.getElementById('chartCatMonthly'), {
+    type: 'bar',
+    data: { labels: MOIS, datasets: catDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, ticks: { stepSize: 1 }, grid: { color: '#f3f4f6' } }
+      }
+    }
+  });
+
+  // By perimeter — colored by rate
+  const perimData = {{ stats.by_perimetre | map(attribute='avg') | list | tojson }};
+  new Chart(document.getElementById('chartByPerimetre'), {
+    type: 'bar',
+    data: {
+      labels: {{ stats.by_perimetre | map(attribute='label') | list | tojson }},
+      datasets: [{
+        label: 'Taux moyen (%)',
+        data: perimData,
+        backgroundColor: perimData.map(v => rateColor(v, 0.8)),
+        borderColor: perimData.map(v => rateBorder(v)),
+        borderWidth: 1.5,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : 'N/A' } },
+      },
+      scales: {
+        y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#f3f4f6' } }
+      }
+    }
+  });
+</script>
+{% endblock %}

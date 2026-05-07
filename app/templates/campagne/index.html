@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Campagne {{ mois_nom }} {{ annee }} – Plan de Contrôle Cyber{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Campagne mensuelle</h1>
+    <p class="text-gray-500 text-sm mt-1">Contrôles à effectuer pour la période sélectionnée</p>
+  </div>
+  <!-- Month navigation -->
+  <div class="flex items-center gap-2">
+    <a href="/campagne?annee={{ prev_annee }}&mois={{ prev_mois }}"
+       class="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+      <svg class="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </a>
+    <span class="font-semibold text-gray-800 text-lg min-w-40 text-center">{{ mois_nom }} {{ annee }}</span>
+    <a href="/campagne?annee={{ next_annee }}&mois={{ next_mois }}"
+       class="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+      <svg class="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+    </a>
+    <a href="/campagne" class="text-sm text-primary-600 hover:text-primary-700 px-3 py-2 border border-primary-200 rounded-lg hover:bg-primary-50">
+      Aujourd'hui
+    </a>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-2xl font-bold text-gray-800">{{ total }}</div>
+    <div class="text-xs text-gray-500 mt-1">Contrôles à faire</div>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-2xl font-bold text-yellow-600">{{ en_attente }}</div>
+    <div class="text-xs text-gray-500 mt-1">Non saisis</div>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-2xl font-bold text-blue-600">{{ saisis }}</div>
+    <div class="text-xs text-gray-500 mt-1">Saisis</div>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-2xl font-bold text-green-600">{{ clotures }}</div>
+    <div class="text-xs text-gray-500 mt-1">Clôturés</div>
+  </div>
+</div>
+
+<!-- Progress bar -->
+{% if total > 0 %}
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
+  <div class="flex justify-between text-xs text-gray-500 mb-1">
+    <span>Avancement</span>
+    <span>{{ ((saisis / total) * 100) | round(0) | int }}% saisis · {{ ((clotures / total) * 100) | round(0) | int }}% clôturés</span>
+  </div>
+  <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+    <div class="h-full bg-blue-500 rounded-full" style="width: {{ ((saisis / total) * 100) | round(0) | int }}%"></div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Table -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+  {% if items %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th class="text-left px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">Référence</th>
+          <th class="text-left px-4 py-3 font-semibold text-gray-600">Libellé</th>
+          <th class="text-center px-4 py-3 font-semibold text-gray-600">Fréquence</th>
+          <th class="text-center px-4 py-3 font-semibold text-gray-600">Période</th>
+          <th class="text-left px-4 py-3 font-semibold text-gray-600">Responsable</th>
+          <th class="text-left px-4 py-3 font-semibold text-gray-600">Assigné à</th>
+          <th class="text-center px-4 py-3 font-semibold text-gray-600">Statut</th>
+          <th class="text-center px-4 py-3 font-semibold text-gray-600">Taux</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for item in items %}
+        {% set c = item.control %}
+        {% set r = item.result %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3">
+            <a href="/controls/{{ c.id }}" class="font-mono font-semibold text-primary-600 hover:text-primary-700">
+              {{ c.reference }}
+            </a>
+          </td>
+          <td class="px-4 py-3 text-gray-700 max-w-xs">
+            <span title="{{ c.libelle }}">{{ c.libelle[:55] }}{% if c.libelle|length > 55 %}…{% endif %}</span>
+          </td>
+          <td class="px-4 py-3 text-center text-gray-500 text-xs">{{ FREQ_LABELS.get(c.frequence, c.frequence) }}</td>
+          <td class="px-4 py-3 text-center font-medium text-gray-700 whitespace-nowrap">{{ item.periode_label }}</td>
+          <td class="px-4 py-3 text-gray-600 text-sm">
+            {% if c.responsable %}{{ c.responsable.nom_complet or c.responsable.username }}{% else %}<span class="text-gray-400">—</span>{% endif %}
+          </td>
+          <td class="px-4 py-3 text-gray-600 text-sm">
+            {% if user.role == 'responsable' %}
+              <form method="post" action="/campagne/assign" class="flex items-center gap-1.5">
+                <input type="hidden" name="control_id" value="{{ c.id }}">
+                <input type="hidden" name="annee" value="{{ annee }}">
+                <input type="hidden" name="mois_cal" value="{{ mois }}">
+                <input type="hidden" name="period_idx" value="{{ item.period_idx }}">
+                <input type="hidden" name="redirect_annee" value="{{ annee }}">
+                <input type="hidden" name="redirect_mois" value="{{ mois }}">
+                <select name="assigned_to_id" onchange="this.form.submit()"
+                        class="text-xs border border-gray-200 rounded px-2 py-1 text-gray-700 bg-white focus:ring-1 focus:ring-primary-500 max-w-36">
+                  <option value="">— Non assigné —</option>
+                  {% for a in auditeurs %}
+                    <option value="{{ a.id }}"
+                      {% if r and r.assigned_to_id == a.id %}selected{% endif %}>
+                      {{ a.nom_complet or a.username }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </form>
+            {% else %}
+              {% if r and r.assigned_to %}
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="w-5 h-5 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center">
+                    {{ (r.assigned_to.nom_complet or r.assigned_to.username)[0]|upper }}
+                  </span>
+                  {{ r.assigned_to.nom_complet or r.assigned_to.username }}
+                </span>
+              {% else %}
+                <span class="text-gray-400">—</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-center">
+            {% if not r or r.taux_conformite is none %}
+              <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Non saisi</span>
+            {% elif r.validated %}
+              <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Clôturé</span>
+            {% elif r.statut == 'conforme' %}
+              <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Saisi – Conforme</span>
+            {% elif r.statut == 'non_conforme' %}
+              <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Saisi – Non conforme</span>
+            {% elif r.statut == 'incident_en_cours' %}
+              <span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">⚠ Incident</span>
+            {% elif r.statut == 'na' %}
+              <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">N/A</span>
+            {% else %}
+              <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">En attente</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-center">
+            {% if r and r.taux_conformite is not none %}
+              {% set color = compliance_color(r.taux_conformite) %}
+              <span class="font-bold {% if color == 'green' %}text-green-600{% elif color == 'yellow' %}text-yellow-600{% else %}text-red-600{% endif %}">
+                {{ r.taux_conformite|round(1) }}%
+              </span>
+            {% else %}
+              <span class="text-gray-300">—</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-right">
+            {% if not r or r.taux_conformite is none %}
+              <a href="/controls/{{ c.id }}/results/new"
+                 class="text-xs bg-primary-600 hover:bg-primary-700 text-white px-3 py-1 rounded-md transition-colors font-medium">
+                Saisir
+              </a>
+            {% else %}
+              <a href="/controls/{{ c.id }}/results/new"
+                 class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 border border-gray-200 rounded hover:border-gray-300">
+                Modifier
+              </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="py-16 text-center text-gray-400">
+    <svg class="h-12 w-12 mx-auto mb-3 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+    </svg>
+    <p class="font-medium text-gray-500">Aucun contrôle prévu ce mois</p>
+    <p class="text-sm text-gray-400 mt-1">Aucun contrôle n'est dû pour {{ mois_nom }} {{ annee }}.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
