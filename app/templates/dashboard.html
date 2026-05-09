@@ -58,6 +58,29 @@
   {% endfor %}
 </div>
 
+<!-- Tab bar -->
+<div x-data="{ tab: 'annuel' }" x-init="$watch('tab', v => { if (v === 'indicateurs') setTimeout(initSparklines, 80) })" id="dash-tabs">
+  <div class="flex border-b border-gray-200 mb-6 gap-1">
+    <button @click="tab='annuel'"
+            :class="tab==='annuel' ? 'border-b-2 border-primary-600 text-primary-700 font-semibold' : 'text-gray-500 hover:text-gray-700'"
+            class="px-4 py-2 text-sm transition-colors">
+      Vue annuelle
+    </button>
+    <button @click="tab='mensuel'"
+            :class="tab==='mensuel' ? 'border-b-2 border-primary-600 text-primary-700 font-semibold' : 'text-gray-500 hover:text-gray-700'"
+            class="px-4 py-2 text-sm transition-colors">
+      Vue mensuelle
+    </button>
+    <button @click="tab='indicateurs'"
+            :class="tab==='indicateurs' ? 'border-b-2 border-primary-600 text-primary-700 font-semibold' : 'text-gray-500 hover:text-gray-700'"
+            class="px-4 py-2 text-sm transition-colors">
+      Indicateurs
+    </button>
+  </div>
+
+<!-- ─── ONGLET ANNUEL ──────────────────────────────────────────────────── -->
+<div x-show="tab==='annuel'">
+
 <!-- Global rate banner -->
 {% if stats.compliance_rate is not none %}
 <div class="mb-8 rounded-xl p-5 {% if stats.compliance_rate >= 90 %}bg-green-600{% elif stats.compliance_rate >= 70 %}bg-yellow-500{% else %}bg-red-600{% endif %} text-white flex items-center justify-between">
@@ -131,6 +154,46 @@
   </h2>
   <div style="height: {{ [stats.by_auditor|length * 44, 120]|max }}px">
     <canvas id="chartByAuditor"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<!-- Worst controls annual -->
+{% if stats.worst_controls %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+  <div class="px-5 py-4 border-b border-gray-100 bg-gray-50">
+    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Contrôles les moins performants – {{ current_year }}</h2>
+    <p class="text-xs text-gray-400 mt-0.5">Top 10 · taux de conformité moyen croissant</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead><tr class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b">
+        <th class="text-left px-4 py-2.5 font-medium w-6">#</th>
+        <th class="text-left px-4 py-2.5 font-medium">Référence</th>
+        <th class="text-left px-4 py-2.5 font-medium hidden md:table-cell">Libellé</th>
+        <th class="text-left px-4 py-2.5 font-medium hidden lg:table-cell">Thématique</th>
+        <th class="text-center px-4 py-2.5 font-medium">Taux moyen</th>
+        <th class="text-center px-4 py-2.5 font-medium">Cible</th>
+        <th class="text-center px-4 py-2.5 font-medium">Non conf.</th>
+      </tr></thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for c in stats.worst_controls %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-2.5 text-gray-400 text-xs">{{ loop.index }}</td>
+          <td class="px-4 py-2.5"><a href="/controls/{{ c.id }}" class="font-mono text-sm font-semibold text-primary-700 hover:underline">{{ c.reference }}</a></td>
+          <td class="px-4 py-2.5 text-gray-600 text-xs hidden md:table-cell max-w-xs truncate">{{ c.libelle[:80] }}{% if c.libelle|length > 80 %}…{% endif %}</td>
+          <td class="px-4 py-2.5 text-xs text-gray-500 hidden lg:table-cell">{{ c.type_label }}</td>
+          <td class="px-4 py-2.5 text-center">
+            {% if c.avg >= 90 %}<span class="text-xs font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-full">{{ c.avg }}%</span>
+            {% elif c.avg >= 70 %}<span class="text-xs font-bold text-yellow-700 bg-yellow-100 px-2.5 py-1 rounded-full">{{ c.avg }}%</span>
+            {% else %}<span class="text-xs font-bold text-red-700 bg-red-100 px-2.5 py-1 rounded-full">{{ c.avg }}%</span>{% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-center text-xs text-gray-500">{{ c.taux_cible|round(0)|int }}%</td>
+          <td class="px-4 py-2.5 text-center text-xs font-semibold {% if c.non_conf > 0 %}text-red-700{% else %}text-gray-400{% endif %}">{{ c.non_conf }}/{{ c.total }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 {% endif %}
@@ -330,7 +393,8 @@
     </div>
   </div>
 
-</div>
+</div><!-- /detail tables -->
+</div><!-- /onglet annuel content -->
 
 <script>
   const MOIS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
@@ -566,4 +630,270 @@
     }
   });
 </script>
+
+<!-- ─── ONGLET MENSUEL ────────────────────────────────────────────────── -->
+<div x-show="tab==='mensuel'" x-cloak>
+
+  <!-- Heatmap thématique × mois -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Conformité mensuelle par thématique – {{ current_year }}</h2>
+        <p class="text-xs text-gray-400 mt-0.5">Taux moyen des contrôles par mois de début de période</p>
+      </div>
+      <div class="flex items-center gap-3 text-xs text-gray-500">
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-green-500 inline-block"></span>≥ 90%</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-yellow-400 inline-block"></span>70–89%</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-red-500 inline-block"></span>&lt; 70%</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-gray-200 inline-block"></span>Aucune donnée</span>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="bg-gray-50 border-b border-gray-100">
+            <th class="text-left px-4 py-2.5 font-medium text-gray-600 w-44 sticky left-0 bg-gray-50">Thématique</th>
+            {% for m in ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'] %}
+            <th class="text-center px-2 py-2.5 font-medium text-gray-500 min-w-[56px]">{{ m }}</th>
+            {% endfor %}
+            <th class="text-center px-3 py-2.5 font-medium text-gray-600 min-w-[64px]">Moy.</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for t in stats.monthly_by_type %}
+          <tr class="hover:bg-gray-50/60 transition-colors">
+            <td class="px-4 py-2.5 font-medium text-gray-800 sticky left-0 bg-white">{{ t.label }}</td>
+            {% for v in t.months %}
+            <td class="text-center px-1 py-2">
+              {% if v is not none %}
+                {% if v >= 90 %}
+                  <span class="inline-block w-full text-center px-1 py-1 rounded font-semibold text-green-800 bg-green-100">{{ v }}%</span>
+                {% elif v >= 70 %}
+                  <span class="inline-block w-full text-center px-1 py-1 rounded font-semibold text-yellow-800 bg-yellow-100">{{ v }}%</span>
+                {% else %}
+                  <span class="inline-block w-full text-center px-1 py-1 rounded font-semibold text-red-800 bg-red-100">{{ v }}%</span>
+                {% endif %}
+              {% else %}
+                <span class="text-gray-300">—</span>
+              {% endif %}
+            </td>
+            {% endfor %}
+            <td class="text-center px-3 py-2">
+              {% if t.avg is not none %}
+                {% if t.avg >= 90 %}
+                  <span class="inline-flex items-center gap-1 text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">{{ t.avg }}%</span>
+                {% elif t.avg >= 70 %}
+                  <span class="inline-flex items-center gap-1 text-xs font-bold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">{{ t.avg }}%</span>
+                {% else %}
+                  <span class="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">{{ t.avg }}%</span>
+                {% endif %}
+              {% else %}
+                <span class="text-gray-300 text-xs">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Top 10 contrôles les moins performants ce mois -->
+  {% set mois_labels = ['','Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'] %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Contrôles les moins performants – {{ mois_labels[stats.current_month] }} {{ current_year }}</h2>
+      <p class="text-xs text-gray-400 mt-0.5">Top 10 · taux de conformité du mois en cours</p>
+    </div>
+    {% if stats.worst_controls_month %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b">
+          <th class="text-left px-4 py-2.5 font-medium w-6">#</th>
+          <th class="text-left px-4 py-2.5 font-medium">Référence</th>
+          <th class="text-left px-4 py-2.5 font-medium hidden md:table-cell">Libellé</th>
+          <th class="text-left px-4 py-2.5 font-medium hidden lg:table-cell">Thématique</th>
+          <th class="text-center px-4 py-2.5 font-medium">Taux</th>
+          <th class="text-center px-4 py-2.5 font-medium">Cible</th>
+          <th class="text-center px-4 py-2.5 font-medium">Statut</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for c in stats.worst_controls_month %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-4 py-2.5 text-gray-400 text-xs">{{ loop.index }}</td>
+            <td class="px-4 py-2.5"><a href="/controls/{{ c.id }}" class="font-mono text-sm font-semibold text-primary-700 hover:underline">{{ c.reference }}</a></td>
+            <td class="px-4 py-2.5 text-gray-600 text-xs hidden md:table-cell max-w-xs truncate">{{ c.libelle[:80] }}{% if c.libelle|length > 80 %}…{% endif %}</td>
+            <td class="px-4 py-2.5 text-xs text-gray-500 hidden lg:table-cell">{{ c.type_label }}</td>
+            <td class="px-4 py-2.5 text-center">
+              {% if c.taux >= 90 %}<span class="text-xs font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-full">{{ c.taux }}%</span>
+              {% elif c.taux >= 70 %}<span class="text-xs font-bold text-yellow-700 bg-yellow-100 px-2.5 py-1 rounded-full">{{ c.taux }}%</span>
+              {% else %}<span class="text-xs font-bold text-red-700 bg-red-100 px-2.5 py-1 rounded-full">{{ c.taux }}%</span>{% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-center text-xs text-gray-500">{{ c.taux_cible|round(0)|int }}%</td>
+            <td class="px-4 py-2.5 text-center">
+              {% if c.statut == 'conforme' %}<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Conforme</span>
+              {% elif c.statut == 'non_conforme' %}<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Non conforme</span>
+              {% else %}<span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{{ c.statut }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="flex items-center justify-center h-24 text-gray-400 text-sm">Aucun résultat pour {{ mois_labels[stats.current_month] }} {{ current_year }}</div>
+    {% endif %}
+  </div>
+
+</div><!-- /onglet mensuel -->
+
+<!-- ─── ONGLET INDICATEURS ───────────────────────────────────────────────── -->
+<div x-show="tab==='indicateurs'" x-cloak>
+
+{% set ck = stats.indicators_cockpit %}
+{% if ck.total > 0 %}
+
+  <!-- Score global banner -->
+  <div class="mb-6 rounded-xl p-5
+    {% if ck.score is not none %}{% if ck.score >= 90 %}bg-green-600{% elif ck.score >= 70 %}bg-yellow-500{% else %}bg-red-600{% endif %}{% else %}bg-gray-400{% endif %}
+    text-white flex items-center justify-between">
+    <div>
+      <p class="text-sm font-medium opacity-90">Score indicateurs cyber – {{ current_year }}</p>
+      <p class="text-4xl font-bold mt-1">{% if ck.score is not none %}{{ ck.score }}%{% else %}—{% endif %}</p>
+      <p class="text-sm opacity-75 mt-1">{{ ck.conf }} / {{ ck.with_data }} indicateurs conformes · {{ ck.total }} suivis</p>
+    </div>
+    <div class="text-right opacity-20">
+      <svg class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Grouped indicator cards -->
+  {% for group_key, group_items_raw in ck['items'] | groupby('group') %}
+  {% set group_items = group_items_raw | list %}
+  <div class="mb-8">
+    <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-primary-500 inline-block"></span>
+      {{ group_items[0].group_label }}
+      <span class="text-xs font-normal text-gray-400 normal-case tracking-normal">({{ group_items | length }})</span>
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {% for item in group_items %}
+      <div class="bg-white rounded-xl shadow-sm border border-l-4
+                  {% if item.statut == 'conforme' %}border-green-400{% elif item.statut == 'non_conforme' %}border-red-400{% else %}border-gray-300{% endif %}
+                  p-4 flex flex-col gap-2">
+        <!-- Header: ref + trend arrow -->
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <a href="/controls/{{ item.id }}" class="text-xs font-mono font-semibold text-primary-700 hover:underline block truncate">{{ item.reference }}</a>
+            <p class="text-xs text-gray-600 mt-0.5 leading-tight" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ item.libelle }}</p>
+          </div>
+          {% if item.trend == 'up' %}
+            <span class="text-green-500 text-2xl font-bold shrink-0 leading-none" title="En hausse">↑</span>
+          {% elif item.trend == 'down' %}
+            <span class="text-red-500 text-2xl font-bold shrink-0 leading-none" title="En baisse">↓</span>
+          {% elif item.trend == 'stable' %}
+            <span class="text-gray-400 text-2xl font-bold shrink-0 leading-none" title="Stable">→</span>
+          {% endif %}
+        </div>
+
+        <!-- Big value + metadata -->
+        <div class="flex items-end gap-3">
+          {% if item.latest is not none %}
+            <span class="text-3xl font-bold leading-none
+              {% if item.statut == 'conforme' %}text-green-600{% elif item.statut == 'non_conforme' %}text-red-600{% else %}text-gray-400{% endif %}">
+              {{ item.latest }}%
+            </span>
+            <div class="text-xs text-gray-400 leading-snug mb-0.5">
+              <div>{{ item.latest_label }}</div>
+              <div>Cible : {{ item.taux_cible|round(0)|int }}%</div>
+            </div>
+          {% else %}
+            <span class="text-2xl font-bold text-gray-300 leading-none">—</span>
+            <span class="text-xs text-gray-400 mb-0.5">Pas de données</span>
+          {% endif %}
+          <span class="ml-auto text-xs
+            {% if item.statut == 'conforme' %}bg-green-100 text-green-700{% elif item.statut == 'non_conforme' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-500{% endif %}
+            px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+            {% if item.statut == 'conforme' %}Conforme{% elif item.statut == 'non_conforme' %}Non conforme{% else %}Aucune donnée{% endif %}
+          </span>
+        </div>
+
+        <!-- Sparkline -->
+        {% if item.history %}
+        <div class="h-14 mt-1">
+          <canvas id="spark-{{ item.id }}"
+                  data-history='{{ item.history | tojson }}'
+                  data-labels='{{ item.history_labels | tojson }}'
+                  data-cible="{{ item.taux_cible }}"></canvas>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+{% else %}
+  <div class="flex flex-col items-center justify-center h-48 text-gray-400 gap-3">
+    <svg class="h-12 w-12 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+    </svg>
+    <p class="text-sm">Aucun contrôle de type "Indicateurs" trouvé</p>
+  </div>
+{% endif %}
+
+</div><!-- /onglet indicateurs -->
+
+<script>
+function initSparklines() {
+  document.querySelectorAll('canvas[id^="spark-"]').forEach(function(canvas) {
+    if (canvas._sparkDone) return;
+    canvas._sparkDone = true;
+    var history = JSON.parse(canvas.dataset.history || '[]');
+    var labels  = JSON.parse(canvas.dataset.labels  || '[]');
+    var cible   = parseFloat(canvas.dataset.cible   || '100');
+    if (!history.length) return;
+    var last = history[history.length - 1];
+    var ok   = last >= cible;
+    new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            data: history,
+            borderColor:     ok ? '#22c55e' : '#ef4444',
+            backgroundColor: ok ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+            fill: true, borderWidth: 2, pointRadius: 2, tension: 0.3,
+          },
+          {
+            data: history.map(function() { return cible; }),
+            borderColor: 'rgba(156,163,175,0.55)',
+            backgroundColor: 'transparent',
+            borderWidth: 1, borderDash: [4, 3], pointRadius: 0, tension: 0,
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function(ctx) { return ctx.parsed.y + '%'; } } }
+        },
+        scales: {
+          x: { display: false },
+          y: { display: false, min: 0, max: 110 }
+        }
+      }
+    });
+  });
+}
+</script>
+
+</div><!-- /dash-tabs -->
+
 {% endblock %}

@@ -31,7 +31,7 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 - **Saisie des résultats** — formulaire de saisie du taux de conformité par période, statut automatique (conforme / non conforme / NA)
 - **Workflow incident** — ouverture d'un incident depuis un résultat non conforme (avec ou sans ticket JIRA), suivi de l'état (en cours / résolu / clôturé)
 - **Clôtures en attente** — file de validation des résultats soumis par les auditeurs
-- **Tableau de bord** — taux global, conformité par thématique / catégorie / périmètre, tendance mensuelle, graphiques de réalisation par entité
+- **Tableau de bord** — trois onglets : *Vue annuelle* (KPIs, graphiques, top 10 contrôles les moins performants), *Vue mensuelle* (heatmap thématique × mois, top 10 du mois courant), *Indicateurs* (cockpit exécutif cyber avec cartes groupées par domaine, tendance et mini-graphiques)
 - **Journal d'activité** — toutes les actions tracées avec lien direct vers la ressource
 - **Gestion des référentiels** — thématiques, catégories (entités) et périmètres configurables depuis l'administration
 - **Authentification LDAP / SSO** — connexion via Active Directory avec création automatique des comptes, filtrage par OU et groupe AD, fallback local
@@ -105,6 +105,22 @@ Pour charger des contrôles de démonstration :
 python seed_controls.py
 ```
 
+Pour importer un plan de contrôle réel depuis un fichier Excel :
+
+```bash
+# 1. Copier le template et l'adapter
+cp seed_from_excel.example.py seed_from_excel.py
+
+# 2. Éditer seed_from_excel.py : renseigner EXCEL_PATH, YEAR et TYPE_COLORS
+
+# 3. Lancer l'import
+python seed_from_excel.py [chemin_vers_le_fichier.xlsx]
+```
+
+Le script lit les colonnes Thématique, Catégorie, Référence, Fréquence, Indicateur, Objectif, Seuils, Périmètre et les 12 colonnes mensuelles (Jan → Déc). Il crée ou met à jour les contrôles par référence (upsert) et importe les résultats en ignorant les cases vides, N/A et les valeurs brutes supérieures à 100.
+
+> `seed_from_excel.py` est dans `.gitignore` — votre fichier de production avec les chemins et données réels ne sera jamais commité.
+
 ## Comptes par défaut
 
 À changer après la première connexion (Paramètres → Utilisateurs).
@@ -121,6 +137,7 @@ plandecontrole/
 ├── run.py                        # point d'entrée + migrations idempotentes
 ├── requirements.txt
 ├── seed_controls.py              # données de démonstration (15 contrôles)
+├── seed_from_excel.example.py    # template d'import Excel (à copier en seed_from_excel.py)
 ├── app/
 │   ├── main.py                   # application FastAPI, montage des routeurs
 │   ├── models.py                 # ORM : Control, ControlResult, User, History…

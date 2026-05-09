@@ -113,6 +113,125 @@ def _build_stats(db: Session, year: int = None):
         cat_monthly_done.append({"label": cat.label, "data": done_by_month})
         cat_monthly_todo.append({"label": cat.label, "data": todo_by_month})
 
+    # Monthly heatmap by type (period start mapped to calendar month)
+    def period_start_cal_month(freq, mois):
+        if freq == "mensuel": return mois
+        if freq == "bimestriel": return (mois - 1) * 2 + 1
+        if freq == "trimestriel": return (mois - 1) * 3 + 1
+        if freq == "semestriel": return 1 if mois == 1 else 7
+        return 1  # annuel
+
+    monthly_by_type = []
+    for t in types:
+        t_controls = [c for c in controls if c.type_id == t.id]
+        by_cal = {m: [] for m in range(1, 13)}
+        for c in t_controls:
+            for r in c.results:
+                if r.annee == year and r.taux_conformite is not None:
+                    cal_m = period_start_cal_month(c.frequence, r.mois)
+                    if 1 <= cal_m <= 12:
+                        by_cal[cal_m].append(r.taux_conformite)
+        months_data = [
+            round(sum(by_cal[m]) / len(by_cal[m]), 1) if by_cal[m] else None
+            for m in range(1, 13)
+        ]
+        not_none = [v for v in months_data if v is not None]
+        type_avg = round(sum(not_none) / len(not_none), 1) if not_none else None
+        monthly_by_type.append({"label": t.label, "color": t.color, "months": months_data, "avg": type_avg})
+
+    # Worst controls annual — top 10 by avg taux for the year
+    worst_controls = []
+    for c in controls:
+        c_res = [r for r in c.results if r.annee == year and r.taux_conformite is not None]
+        if not c_res:
+            continue
+        avg = round(sum(r.taux_conformite for r in c_res) / len(c_res), 1)
+        non_conf = sum(1 for r in c_res if r.statut == "non_conforme")
+        worst_controls.append({
+            "id": c.id, "reference": c.reference, "libelle": c.libelle,
+            "type_label": c.type.label if c.type else "—",
+            "avg": avg, "non_conf": non_conf, "total": len(c_res),
+            "taux_cible": c.taux_cible,
+        })
+    worst_controls.sort(key=lambda x: x["avg"])
+    worst_controls = worst_controls[:10]
+
+    # Worst controls this month — top 10 for current calendar month
+    def period_covers_cal_month(freq, mois, cal_month):
+        if freq == "mensuel": return mois == cal_month
+        if freq == "bimestriel": return (mois - 1) * 2 + 1 <= cal_month <= mois * 2
+        if freq == "trimestriel": return (mois - 1) * 3 + 1 <= cal_month <= mois * 3
+        if freq == "semestriel": return (cal_month <= 6) if mois == 1 else (cal_month >= 7)
+        return True  # annuel
+
+    current_month = date.today().month
+    worst_controls_month = []
+    for c in controls:
+        for r in c.results:
+            if r.annee == year and r.taux_conformite is not None and period_covers_cal_month(c.frequence, r.mois, current_month):
+                worst_controls_month.append({
+                    "id": c.id, "reference": c.reference, "libelle": c.libelle,
+                    "type_label": c.type.label if c.type else "—",
+                    "taux": r.taux_conformite, "statut": r.statut,
+                    "taux_cible": c.taux_cible,
+                })
+                break
+    worst_controls_month.sort(key=lambda x: x["taux"])
+    worst_controls_month = worst_controls_month[:10]
+
+    # Indicators cockpit — grouped by domain
+    import re as _re
+    GROUP_LABELS = {
+        "INC": "Incidents SECOPS",
+        "VUM": "Vulnérabilités",
+        "PSR": "Protection / CTI",
+        "INF": "Infrastructure",
+        "DEV": "Développement",
+        "IGA": "Accès privilégiés",
+        "CNF": "Conformité",
+    }
+    ind_type = next((t for t in types if t.label == "Indicateurs"), None)
+    ind_controls = [c for c in controls if ind_type and c.type_id == ind_type.id]
+    ind_items = []
+    for c in ind_controls:
+        c_res = sorted(
+            [r for r in c.results if r.annee == year and r.taux_conformite is not None],
+            key=lambda r: r.mois,
+        )
+        latest = c_res[-1] if c_res else None
+        prev = c_res[-2] if len(c_res) >= 2 else None
+        trend = None
+        if latest and prev:
+            d = latest.taux_conformite - prev.taux_conformite
+            trend = "up" if d > 1 else ("down" if d < -1 else "stable")
+        m = _re.search(r"IND-([A-Z]+)", c.reference)
+        gc = m.group(1) if m else "AUTRE"
+        ind_items.append({
+            "id": c.id,
+            "reference": c.reference,
+            "libelle": c.libelle[:65],
+            "frequence": c.frequence,
+            "taux_cible": c.taux_cible,
+            "latest": round(latest.taux_conformite, 1) if latest else None,
+            "latest_label": latest.periode_label if latest else None,
+            "statut": latest.statut if latest else "no_data",
+            "trend": trend,
+            "history": [round(r.taux_conformite, 1) for r in c_res],
+            "history_labels": [r.periode_label for r in c_res],
+            "group": gc,
+            "group_label": GROUP_LABELS.get(gc, gc),
+        })
+    ind_items.sort(key=lambda x: (x["group"], x["reference"]))
+    ind_with_data = [i for i in ind_items if i["latest"] is not None]
+    ind_conf_count = sum(1 for i in ind_with_data if i["statut"] == "conforme")
+    indicators_cockpit = {
+        "items": ind_items,
+        "score": round(ind_conf_count / len(ind_with_data) * 100, 1) if ind_with_data else None,
+        "conf": ind_conf_count,
+        "total": len(ind_items),
+        "with_data": len(ind_with_data),
+    }
+
     # By auditor — based on assigned_to_id on campaign results for the year
     by_auditor = []
     auditor_ids = [
@@ -155,6 +274,11 @@ def _build_stats(db: Session, year: int = None):
         "cat_monthly_done": cat_monthly_done,
         "cat_monthly_todo": cat_monthly_todo,
         "by_auditor": by_auditor,
+        "monthly_by_type": monthly_by_type,
+        "worst_controls": worst_controls,
+        "worst_controls_month": worst_controls_month,
+        "current_month": current_month,
+        "indicators_cockpit": indicators_cockpit,
         "compliance_rate": round(
             sum(r.taux_conformite for r in results_this_year.values()) / len(results_this_year), 1
         ) if results_this_year else None,

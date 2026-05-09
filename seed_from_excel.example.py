@@ -1,8 +1,23 @@
 """
-Import du Plan de Contrôle depuis PDC1.xlsx vers la base de données.
+Import du Plan de Contrôle depuis un fichier Excel vers la base de données.
 
 Usage : python seed_from_excel.py [chemin_excel]
-Par défaut : C:\\Users\\Romain\\Downloads\\PDC1.xlsx
+
+Format attendu du fichier Excel (données à partir de la ligne 3) :
+  Col 0  : Thématique       — doit correspondre à une entrée de TYPE_COLORS
+  Col 1  : Catégorie        — ex. « Entité A », « Entité B »
+  Col 3  : Référence        — identifiant unique du contrôle (ex. ACC-001)
+  Col 4  : Fréquence        — mensuel / bimestriel / trimestriel / semestriel / annuel
+  Col 5  : Indicateur       — libellé du contrôle
+  Col 6  : Objectif         — description de la vérification
+  Col 7  : Seuils           — taux cible (ex. 95%, 0.95 ou 95)
+  Col 8  : Périmètre        — ex. « SMSI », « Global »
+  Col 9-20 : Jan → Déc      — résultats mensuels (ratio 0–1, %, ou vide/N/A)
+
+Ligne 1 : titre (ignorée)
+Ligne 2 : en-têtes (ignorée)
+
+Renommez ce fichier en seed_from_excel.py et adaptez les constantes ci-dessous.
 """
 import sys
 import re
@@ -17,8 +32,23 @@ from app.database import SessionLocal
 from app.models import Control, ControlResult, ControlType, Category, Perimetre, User
 from app.utils import periode_label
 
-EXCEL_PATH = r"C:\Users\Romain\Downloads\PDC1.xlsx"
+# ── À ADAPTER ──────────────────────────────────────────────────────────────
+EXCEL_PATH = r"C:\chemin\vers\votre\plan_de_controle.xlsx"
 YEAR = 2026
+
+# Thématiques avec leur couleur Tailwind — doit correspondre aux données Excel
+TYPE_COLORS = {
+    "Alertes":                      "red",
+    "Accès logique":                "blue",
+    "Accès physique":               "orange",
+    "Accès réseaux":                "indigo",
+    "Attestation sur l'honneur":    "purple",
+    "Audit de configuration":       "teal",
+    "Comptes utilisateurs et services": "cyan",
+    "Indicateurs":                  "gray",
+    "Secrets et données":           "yellow",
+}
+# ───────────────────────────────────────────────────────────────────────────
 
 FREQ_MAP = {
     "mensuel": "mensuel", "mensuelle": "mensuel",
@@ -28,25 +58,11 @@ FREQ_MAP = {
     "annuel": "annuel", "annuelle": "annuel",
 }
 
-TYPE_COLORS = {
-    "Alertes": "red",
-    "Accès logique": "blue",
-    "Accès physique": "orange",
-    "Accès réseaux": "indigo",
-    "Attestation sur l'honneur": "purple",
-    "Audit de configuration": "teal",
-    "Comptes utilisateurs et services": "cyan",
-    "Indicateurs": "gray",
-    "Secrets et données": "yellow",
-}
-
 
 def parse_taux_cible(seuil) -> float:
-    """Extrait le taux cible en % depuis la cellule Seuils. Défaut : 100."""
     if seuil is None:
         return 100.0
     if isinstance(seuil, (int, float)):
-        # 1 = 100%, déjà un %
         return 100.0 if seuil <= 1 else float(seuil)
     s = str(seuil)
     m = re.search(r"(\d+)\s*%", s)
@@ -56,13 +72,13 @@ def parse_taux_cible(seuil) -> float:
 
 
 def cal_month_to_period(freq: str, cal_month: int) -> int:
-    """Convertit un mois calendaire (1-12) en index de période selon la fréquence."""
+    """Mois calendaire (1-12) → index de période selon la fréquence."""
     if freq == "mensuel":
         return cal_month
     if freq == "bimestriel":
-        return (cal_month + 1) // 2  # 1-2→1, 3-4→2, 5-6→3, 7-8→4, 9-10→5, 11-12→6
+        return (cal_month + 1) // 2
     if freq == "trimestriel":
-        return (cal_month - 1) // 3 + 1  # 1-3→1, 4-6→2, 7-9→3, 10-12→4
+        return (cal_month - 1) // 3 + 1
     if freq == "semestriel":
         return 1 if cal_month <= 6 else 2
     return 1  # annuel
@@ -70,36 +86,23 @@ def cal_month_to_period(freq: str, cal_month: int) -> int:
 
 def parse_result(val, taux_cible: float):
     """
-    Retourne (taux_conformite, statut, skip) depuis la valeur Excel.
-
-    skip=True  → ne pas créer de résultat
-    statut     → 'conforme' | 'non_conforme' | 'na'
+    Retourne (taux_conformite, statut, skip).
+    skip=True  → ne pas créer de résultat (N/A, vide, valeur non normalisable).
     """
     if val is None:
         return None, None, True
-
-    # Valeur temporelle (ex. 00:13:00) → impossible à normaliser en %
     if isinstance(val, (dt.time, dt.datetime)):
         return None, None, True
-
     if isinstance(val, str):
-        # N/A = période non planifiée, Différé, En construction → pas de résultat
         return None, None, True
 
-    # Numérique
     f = float(val)
-
-    # Ratio 0-1 (la grande majorité des cas)
     if 0.0 <= f <= 1.0:
         taux = round(f * 100, 1)
         statut = "conforme" if taux >= taux_cible else "non_conforme"
         return taux, statut, False
-
-    # > 100 → valeur brute (nombre de tickets, etc.) → on ignore
     if f > 100:
         return None, None, True
-
-    # 1 < f <= 100 → pourcentage direct
     taux = round(f, 1)
     statut = "conforme" if taux >= taux_cible else "non_conforme"
     return taux, statut, False
@@ -110,7 +113,6 @@ def run(excel_path: str = EXCEL_PATH):
     wb = openpyxl.load_workbook(excel_path, read_only=True, data_only=True)
     ws = wb.active
     all_rows = list(ws.iter_rows(values_only=True))
-    # Ligne 1 = titre année, ligne 2 = en-têtes, données à partir de ligne 3
     data = [r for r in all_rows[2:] if any(c is not None for c in r)]
 
     db = SessionLocal()
@@ -118,7 +120,7 @@ def run(excel_path: str = EXCEL_PATH):
         admin = db.query(User).filter(User.username == "admin").first()
         admin_id = admin.id if admin else None
 
-        # ── 1. Thématiques ─────────────────────────────────────────────
+        # 1. Thématiques
         type_map = {}
         for i, (label, color) in enumerate(TYPE_COLORS.items()):
             t = db.query(ControlType).filter(ControlType.label == label).first()
@@ -129,9 +131,10 @@ def run(excel_path: str = EXCEL_PATH):
                 print(f"  [+] Thématique : {label}")
             type_map[label] = t.id
 
-        # ── 2. Catégories ──────────────────────────────────────────────
+        # 2. Catégories (créées à la volée depuis les données)
         cat_map = {}
-        for i, label in enumerate(["DRI", "DSO"]):
+        cat_labels = sorted({str(r[1]).strip() for r in data if r[1]})
+        for i, label in enumerate(cat_labels):
             c = db.query(Category).filter(Category.label == label).first()
             if not c:
                 c = Category(label=label, ordre=i, active=True)
@@ -140,9 +143,10 @@ def run(excel_path: str = EXCEL_PATH):
                 print(f"  [+] Catégorie : {label}")
             cat_map[label] = c.id
 
-        # ── 3. Périmètres ──────────────────────────────────────────────
+        # 3. Périmètres (créés à la volée depuis les données)
         perim_map = {}
-        for i, label in enumerate(["SMSI", "eiDAS"]):
+        perim_labels = sorted({str(r[8]).strip() for r in data if r[8]})
+        for i, label in enumerate(perim_labels):
             p = db.query(Perimetre).filter(Perimetre.label == label).first()
             if not p:
                 p = Perimetre(label=label, ordre=i, active=True)
@@ -153,7 +157,7 @@ def run(excel_path: str = EXCEL_PATH):
 
         db.commit()
 
-        # ── 4. Contrôles et résultats ──────────────────────────────────
+        # 4. Contrôles et résultats
         ctrl_created = ctrl_updated = 0
         res_created = res_skipped = 0
 
@@ -166,7 +170,7 @@ def run(excel_path: str = EXCEL_PATH):
             objectif    = (str(row[6]).strip() if row[6] else None)
             seuil       = row[7]
             perim_label = (str(row[8]).strip() if row[8] else "")
-            monthly     = row[9:21]  # Jan→Déc
+            monthly     = row[9:21]  # Jan → Déc
 
             if not ref or ref == "None":
                 continue
@@ -175,27 +179,20 @@ def run(excel_path: str = EXCEL_PATH):
             taux_cible = parse_taux_cible(seuil)
             libelle = indicateur[:400] if indicateur else ref
 
-            # Upsert contrôle
             ctrl = db.query(Control).filter(Control.reference == ref).first()
             if not ctrl:
                 ctrl = Control(
-                    reference=ref,
-                    libelle=libelle,
-                    indicateur=indicateur,
-                    objectif=objectif,
-                    frequence=freq,
-                    taux_cible=taux_cible,
+                    reference=ref, libelle=libelle, indicateur=indicateur,
+                    objectif=objectif, frequence=freq, taux_cible=taux_cible,
                     type_id=type_map.get(theme_label),
                     category_id=cat_map.get(cat_label),
                     perimetre_id=perim_map.get(perim_label),
-                    responsable_id=admin_id,
-                    created_by_id=admin_id,
+                    responsable_id=admin_id, created_by_id=admin_id,
                 )
                 db.add(ctrl)
                 db.flush()
                 ctrl_created += 1
             else:
-                # Mettre à jour les champs si déjà présent
                 ctrl.libelle = libelle
                 ctrl.indicateur = indicateur
                 ctrl.objectif = objectif
@@ -207,24 +204,16 @@ def run(excel_path: str = EXCEL_PATH):
                 db.flush()
                 ctrl_updated += 1
 
-            # ── Résultats mensuels ─────────────────────────────────────
-            # Suivi des périodes déjà créées pour éviter les doublons
             periods_done: set[int] = set()
-
             for cal_month, val in enumerate(monthly, start=1):
                 taux, statut, skip = parse_result(val, taux_cible)
                 if skip:
                     continue
-
                 period_idx = cal_month_to_period(freq, cal_month)
-
-                # Éviter les doublons (plusieurs mois dans la même période)
                 if period_idx in periods_done:
                     res_skipped += 1
                     continue
                 periods_done.add(period_idx)
-
-                # Vérifier si un résultat existe déjà
                 existing = db.query(ControlResult).filter(
                     ControlResult.control_id == ctrl.id,
                     ControlResult.annee == YEAR,
@@ -233,19 +222,12 @@ def run(excel_path: str = EXCEL_PATH):
                 if existing:
                     res_skipped += 1
                     continue
-
                 plabel = periode_label(freq, YEAR, period_idx)
                 res = ControlResult(
-                    control_id=ctrl.id,
-                    annee=YEAR,
-                    mois=period_idx,
-                    periode_label=plabel,
-                    taux_conformite=taux,
-                    statut=statut,
-                    validated=True,
-                    validated_by_id=admin_id,
-                    validated_at=datetime.datetime.utcnow(),
-                    created_by_id=admin_id,
+                    control_id=ctrl.id, annee=YEAR, mois=period_idx,
+                    periode_label=plabel, taux_conformite=taux, statut=statut,
+                    validated=True, validated_by_id=admin_id,
+                    validated_at=datetime.datetime.utcnow(), created_by_id=admin_id,
                 )
                 db.add(res)
                 res_created += 1
@@ -257,7 +239,7 @@ def run(excel_path: str = EXCEL_PATH):
         print(f"Contrôles mis à j.: {ctrl_updated}")
         print(f"Résultats créés   : {res_created}")
         print(f"Résultats ignorés : {res_skipped}")
-        print(f"{'-' * 40}")
+        print(f"{'─' * 40}")
         print("Import terminé.")
 
     except Exception as e:

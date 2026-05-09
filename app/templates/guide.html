@@ -42,6 +42,9 @@
           <a href="#incidents" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Incidents</a>
           <a href="#clotures" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Clôtures</a>
           <a href="#dashboard" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Tableau de bord</a>
+          <a href="#dashboard-annuel" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Vue annuelle</a>
+          <a href="#dashboard-mensuel" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Vue mensuelle</a>
+          <a href="#dashboard-indicateurs" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Indicateurs</a>
           <a href="#admin" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Administration</a>
           <a href="#utilisateurs" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Utilisateurs</a>
           <a href="#parametres" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Paramètres</a>
@@ -391,41 +394,21 @@
       <section id="dashboard">
         <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Tableau de bord</h2>
         <div class="space-y-4 text-gray-600">
-          <p>Le tableau de bord offre une vue synthétique du plan de contrôle pour une année sélectionnable. Seules les années ayant au moins un résultat sont proposées dans le sélecteur.</p>
+          <p>Le tableau de bord offre une vue synthétique du plan de contrôle pour une année sélectionnable. Il est organisé en trois onglets — <strong>Vue annuelle</strong>, <strong>Vue mensuelle</strong> et <strong>Indicateurs</strong> — accessibles depuis la barre d'onglets sous les KPIs.</p>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
-              <h3 class="font-semibold text-gray-800 mb-2 text-sm">Indicateurs (KPIs)</h3>
-              <ul class="text-xs space-y-1 text-gray-600">
-                <li>• Total contrôles actifs</li>
-                <li>• Conformes / Non conformes</li>
-                <li>• Sans résultat (non saisis)</li>
-                <li>• En retard</li>
-                <li>• À clôturer (en attente de validation)</li>
-              </ul>
-            </div>
-            <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
-              <h3 class="font-semibold text-gray-800 mb-2 text-sm">Graphiques</h3>
-              <ul class="text-xs space-y-1 text-gray-600">
-                <li>• Conformité par thématique (barres)</li>
-                <li>• Conformité par catégorie (barres horizontales)</li>
-                <li>• Conformité par périmètre (barres)</li>
-                <li>• Tendance mensuelle (courbe)</li>
-                <li>• Réalisation par catégorie/mois (barres empilées)</li>
-                <li>• Répartition des contrôles par auditeur (barres horizontales)</li>
-              </ul>
-            </div>
-          </div>
-
-          <div>
-            <h3 class="font-semibold text-gray-800 mb-2">Alertes et incidents</h3>
-            <ul class="list-disc list-inside space-y-1 text-xs">
-              <li><strong>Contrôles en retard</strong> — contrôles dont l'échéance est dépassée</li>
-              <li><strong>Incidents en cours</strong> — résultats non conformes avec un incident ouvert et non clôturé, affichés avec leur N° incident et ticket JIRA éventuels</li>
-              <li><strong>Échéance proche</strong> — contrôles dont la prochaine échéance tombe dans moins de 7 jours (seuil configurable dans les paramètres)</li>
+          <!-- KPIs communs -->
+          <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+            <h3 class="font-semibold text-gray-800 mb-2 text-sm">Indicateurs de synthèse (communs aux trois vues)</h3>
+            <ul class="text-xs space-y-1 text-gray-600">
+              <li>• Total contrôles actifs</li>
+              <li>• Conformes / Non conformes</li>
+              <li>• Sans résultat (non saisis)</li>
+              <li>• En retard</li>
+              <li>• À clôturer (en attente de validation)</li>
             </ul>
           </div>
 
+          <!-- Code couleur -->
           <div>
             <h3 class="font-semibold text-gray-800 mb-2">Code couleur</h3>
             <div class="flex flex-wrap gap-3">
@@ -435,14 +418,117 @@
             </div>
           </div>
 
+          <figure>
+            <img src="/static/screenshots/dashboard.png" alt="Tableau de bord" class="rounded-xl border border-gray-200 shadow-sm w-full">
+            <figcaption class="text-center text-xs text-gray-400 mt-2">Tableau de bord — KPIs et vue annuelle</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ─── VUE ANNUELLE ──────────────────────────────────────────── -->
+      <section id="dashboard-annuel">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Vue annuelle</h2>
+        <div class="space-y-4 text-gray-600">
+          <p>Vue de synthèse pour l'année sélectionnée. Contient le taux global, les graphiques de conformité et les alertes.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+              <h3 class="font-semibold text-gray-800 mb-2 text-sm">Graphiques</h3>
+              <ul class="text-xs space-y-1 text-gray-600">
+                <li>• Conformité par thématique (barres)</li>
+                <li>• Conformité par catégorie (barres horizontales)</li>
+                <li>• Conformité par périmètre (barres)</li>
+                <li>• Tendance mensuelle (courbe)</li>
+                <li>• Réalisation par catégorie/mois (barres empilées)</li>
+                <li>• Répartition des contrôles par auditeur</li>
+              </ul>
+            </div>
+            <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+              <h3 class="font-semibold text-gray-800 mb-2 text-sm">Top 10 contrôles les moins performants</h3>
+              <p class="text-xs text-gray-600">Tableau des 10 contrôles ayant le taux moyen annuel le plus bas, avec le nombre de périodes non conformes sur le total saisi.</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Alertes et incidents</h3>
+            <ul class="list-disc list-inside space-y-1 text-xs">
+              <li><strong>Contrôles en retard</strong> — contrôles dont l'échéance est dépassée</li>
+              <li><strong>Incidents en cours</strong> — résultats non conformes avec un incident ouvert, affichés avec leur N° incident et ticket JIRA</li>
+              <li><strong>Échéance proche</strong> — contrôles dont la prochaine échéance tombe dans moins de 7 jours</li>
+            </ul>
+          </div>
+
           <div>
             <h3 class="font-semibold text-gray-800 mb-2">Export Excel</h3>
-            <p>Le bouton <strong>Exporter Excel</strong> génère un fichier <code class="bg-gray-100 px-1 rounded font-mono text-xs">.xlsx</code> contenant : résumé global, conformité par thématique, tendance mensuelle, liste des contrôles en retard et détail de tous les contrôles.</p>
+            <p>Le bouton <strong>Exporter Excel</strong> génère un fichier <code class="bg-gray-100 px-1 rounded font-mono text-xs">.xlsx</code> contenant : résumé global, conformité par thématique, tendance mensuelle, contrôles en retard et détail de tous les contrôles.</p>
           </div>
-          <figure class="mt-2">
-            <img src="/static/screenshots/dashboard.png" alt="Tableau de bord" class="rounded-xl border border-gray-200 shadow-sm w-full">
-            <figcaption class="text-center text-xs text-gray-400 mt-2">Tableau de bord — KPIs, alertes et graphiques</figcaption>
-          </figure>
+        </div>
+      </section>
+
+      <!-- ─── VUE MENSUELLE ─────────────────────────────────────────── -->
+      <section id="dashboard-mensuel">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Vue mensuelle</h2>
+        <div class="space-y-4 text-gray-600">
+          <p>Vue mois par mois permettant d'identifier rapidement les thématiques et contrôles sous-performants sur le mois courant.</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Heatmap thématique × mois</h3>
+            <p>Tableau croisant chaque thématique avec les 12 mois de l'année. Chaque cellule affiche le taux moyen des contrôles dont la période démarre ce mois-là. La colonne <strong>Moy.</strong> donne la moyenne annuelle de la thématique.</p>
+            <p class="text-xs text-gray-500 mt-1">Les contrôles non mensuels (trimestriels, semestriels…) sont positionnés sur le mois de début de leur période : un trimestriel de T2 apparaît en avril.</p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Top 10 contrôles du mois</h3>
+            <p>Tableau des 10 contrôles ayant le taux le plus bas pour le mois calendaire en cours. Affiche le taux, la cible et le statut pour chaque contrôle.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── INDICATEURS ───────────────────────────────────────────── -->
+      <section id="dashboard-indicateurs">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Indicateurs — cockpit exécutif</h2>
+        <div class="space-y-4 text-gray-600">
+          <p>Vue dédiée aux contrôles de thématique <strong>Indicateurs</strong>. Elle présente un cockpit exécutif cyber synthétisant l'état des indicateurs de surveillance.</p>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Score global</h3>
+            <p>Bannière en haut de page : pourcentage d'indicateurs conformes sur le total de ceux ayant au moins un résultat pour l'année.</p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Cartes indicateurs</h3>
+            <p>Les indicateurs sont regroupés par domaine (déduit du code de référence) :</p>
+            <div class="overflow-hidden rounded-xl border border-gray-200 mt-2">
+              <table class="w-full text-xs">
+                <thead><tr class="bg-gray-50 border-b"><th class="text-left px-4 py-2 font-medium text-gray-500">Code</th><th class="text-left px-4 py-2 font-medium text-gray-500">Domaine</th></tr></thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr><td class="px-4 py-2 font-mono font-semibold text-indigo-700">INC</td><td class="px-4 py-2 text-gray-600">Incidents SECOPS</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2 font-mono font-semibold text-indigo-700">VUM</td><td class="px-4 py-2 text-gray-600">Vulnérabilités</td></tr>
+                  <tr><td class="px-4 py-2 font-mono font-semibold text-indigo-700">PSR</td><td class="px-4 py-2 text-gray-600">Protection / CTI</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2 font-mono font-semibold text-indigo-700">INF</td><td class="px-4 py-2 text-gray-600">Infrastructure</td></tr>
+                  <tr><td class="px-4 py-2 font-mono font-semibold text-indigo-700">DEV</td><td class="px-4 py-2 text-gray-600">Développement</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2 font-mono font-semibold text-indigo-700">IGA</td><td class="px-4 py-2 text-gray-600">Accès privilégiés</td></tr>
+                  <tr><td class="px-4 py-2 font-mono font-semibold text-indigo-700">CNF</td><td class="px-4 py-2 text-gray-600">Conformité</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Le code est extrait de la référence du contrôle (ex. <code class="bg-gray-100 px-1 rounded font-mono">IND-VUM-01</code> → domaine VUM).</p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Contenu de chaque carte</h3>
+            <ul class="list-disc list-inside space-y-1 text-xs">
+              <li>Référence et libellé (lien vers la fiche du contrôle)</li>
+              <li>Valeur courante en grand avec la période et la cible</li>
+              <li>Flèche de tendance : <strong class="text-green-600">↑</strong> hausse, <strong class="text-red-600">↓</strong> baisse, <strong class="text-gray-500">→</strong> stable (comparaison avec la période précédente)</li>
+              <li>Mini-graphique (sparkline) de l'historique de l'année avec ligne de cible pointillée</li>
+              <li>Bordure gauche colorée : verte (conforme), rouge (non conforme), grise (sans données)</li>
+            </ul>
+          </div>
+
+          <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-blue-800 text-xs">
+            Pour qu'un contrôle apparaisse dans l'onglet Indicateurs, sa thématique doit être <strong>Indicateurs</strong>. Ce référentiel est configurable dans <strong>Administration</strong>.
+          </div>
         </div>
       </section>
 
@@ -629,6 +715,8 @@
              "Oui. La suppression est autorisée même si la thématique est associée à des contrôles — ceux-ci seront détachés (champ thématique vidé). Une confirmation indique le nombre de contrôles affectés. Si vous souhaitez simplement masquer la thématique sans perdre de données, préférez la désactiver via le bouton Inactif dans Admin."),
             ("Comment exporter les données ?",
              "Le tableau de bord propose un bouton Exporter Excel qui génère un fichier .xlsx complet avec résumé, conformité par thématique, tendance mensuelle et liste de tous les contrôles pour l'année sélectionnée."),
+            ("Comment importer un plan de contrôle existant depuis Excel ?",
+             "Un template d'import est fourni : seed_from_excel.example.py. Copiez-le en seed_from_excel.py, renseignez le chemin vers votre fichier Excel (EXCEL_PATH), l'année (YEAR) et les thématiques (TYPE_COLORS), puis lancez : python seed_from_excel.py. Le script lit les colonnes Thématique, Catégorie, Référence, Fréquence, Indicateur, Objectif, Seuils, Périmètre et les 12 colonnes mensuelles. Il crée ou met à jour les contrôles par référence (upsert) et ignore les cases vides, N/A et les valeurs brutes supérieures à 100. Le fichier seed_from_excel.py est dans .gitignore et ne sera jamais commité."),
             ("L'authentification LDAP fonctionne-t-elle avec Azure AD ?",
              "Non directement — l'intégration utilise le protocole LDAP classique (ldap3) et requiert un contrôleur de domaine Active Directory on-premise accessible en réseau. Azure AD ne propose pas de point d'entrée LDAP natif sans passer par Azure AD Domain Services."),
             ("Un utilisateur LDAP peut-il changer son mot de passe dans l'application ?",

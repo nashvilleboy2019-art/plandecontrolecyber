@@ -1,6 +1,9 @@
 # Claude Code
 .claude/
 
+# Import production (données réelles — ne pas commiter)
+seed_from_excel.py
+
 # Base de données
 data/
 *.db

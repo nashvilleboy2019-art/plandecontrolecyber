@@ -36,16 +36,6 @@ def _migrate_data():
 
     db = SessionLocal()
     try:
-        # Rename DRI→Entité 1 and DSO→Entité 2 if still at old labels
-        for old, new in [("DRI", "Entité 1"), ("DSO", "Entité 2")]:
-            row = db.query(Category).filter(Category.label == old).first()
-            if row and not db.query(Category).filter(Category.label == new).first():
-                row.label = new
-        # Hard-delete DRI/DSO if somehow still present after rename
-        for label in ["DRI", "DSO"]:
-            row = db.query(Category).filter(Category.label == label).first()
-            if row:
-                db.delete(row)
         # Remove old default perimetres
         for label in ["SMD", "eDAS", "MRS1", "MRS2", "CLY", "CLICHY", "VEN/VENELLES"]:
             row = db.query(Perimetre).filter(Perimetre.label == label).first()
