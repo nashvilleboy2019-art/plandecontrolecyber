@@ -13,9 +13,13 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 
 ## Aperçu
 
-| Tableau de bord | Liste des contrôles |
+| Tableau de bord — Vue annuelle | Vue mensuelle |
 |:---:|:---:|
-| ![Dashboard](static/screenshots/dashboard.png) | ![Contrôles](static/screenshots/controls_list.png) |
+| ![Dashboard](static/screenshots/dashboard.png) | ![Vue mensuelle](static/screenshots/dashboard_mensuel.png) |
+
+| Cockpit Indicateurs | Liste des contrôles |
+|:---:|:---:|
+| ![Indicateurs](static/screenshots/dashboard_indicateurs.png) | ![Contrôles](static/screenshots/controls_list.png) |
 
 | Campagne mensuelle | Administration |
 |:---:|:---:|

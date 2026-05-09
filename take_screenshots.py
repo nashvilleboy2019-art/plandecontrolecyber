@@ -5,20 +5,6 @@ import time
 BASE = "http://127.0.0.1:8002"
 OUT = "static/screenshots"
 
-PAGES = [
-    ("login", "/login", None),
-    ("dashboard", "/dashboard", None),
-    ("controls_list", "/controls", None),
-    ("control_detail", "/controls/1", None),
-    ("campagne", "/campagne", None),
-    ("results_pending", "/results/pending", None),
-    ("admin", "/admin", None),
-    ("settings", "/settings", None),
-    ("settings_ldap", "/settings#ldap", None),
-    ("activity", "/activity", None),
-    ("guide", "/guide", None),
-]
-
 
 def run():
     with sync_playwright() as p:
@@ -34,29 +20,92 @@ def run():
         page.wait_for_url(f"{BASE}/dashboard", timeout=5000)
         print("Logged in")
 
-        for name, path, extra in PAGES:
-            if name == "login":
-                # Take login page in a fresh context
-                ctx2 = browser.new_context(viewport={"width": 1400, "height": 900})
-                p2 = ctx2.new_page()
-                p2.goto(f"{BASE}/login")
-                p2.wait_for_load_state("networkidle")
-                p2.screenshot(path=f"{OUT}/{name}.png", full_page=False)
-                print(f"  {name}.png")
-                ctx2.close()
-                continue
-
-            try:
+        def shot(name, path=None, action=None, wait=0.6):
+            if path:
                 page.goto(f"{BASE}{path}")
-                page.wait_for_load_state("networkidle", timeout=8000)
-                time.sleep(0.4)  # let charts render
-                page.screenshot(path=f"{OUT}/{name}.png", full_page=False)
-                print(f"  {name}.png")
-            except Exception as e:
-                print(f"  SKIP {name}: {e}")
+                page.wait_for_load_state("networkidle", timeout=10000)
+            if action:
+                action()
+            time.sleep(wait)
+            page.screenshot(path=f"{OUT}/{name}.png", full_page=False)
+            print(f"  {name}.png")
+
+        # Login page (fresh context, not authenticated)
+        ctx2 = browser.new_context(viewport={"width": 1400, "height": 900})
+        p2 = ctx2.new_page()
+        p2.goto(f"{BASE}/login")
+        p2.wait_for_load_state("networkidle")
+        p2.screenshot(path=f"{OUT}/login.png", full_page=False)
+        print("  login.png")
+        ctx2.close()
+
+        # Dashboard — Vue annuelle (default)
+        shot("dashboard", "/dashboard", wait=1.0)
+
+        # Dashboard — Vue mensuelle
+        def click_mensuel():
+            page.click("button:has-text('Vue mensuelle')")
+            time.sleep(0.3)
+        shot("dashboard_mensuel", action=click_mensuel, wait=0.6)
+
+        # Dashboard — Indicateurs
+        def click_indicateurs():
+            page.goto(f"{BASE}/dashboard")
+            page.wait_for_load_state("networkidle", timeout=10000)
+            page.click("button:has-text('Indicateurs')")
+            time.sleep(0.8)  # wait for sparklines to render
+        shot("dashboard_indicateurs", action=click_indicateurs, wait=0.5)
+
+        # Other pages
+        try:
+            shot("controls_list", "/controls")
+        except Exception as e:
+            print(f"  SKIP controls_list: {e}")
+
+        try:
+            shot("control_detail", "/controls/1")
+        except Exception as e:
+            print(f"  SKIP control_detail: {e}")
+
+        try:
+            shot("campagne", "/campagne")
+        except Exception as e:
+            print(f"  SKIP campagne: {e}")
+
+        try:
+            shot("results_pending", "/results/pending")
+        except Exception as e:
+            print(f"  SKIP results_pending: {e}")
+
+        try:
+            shot("admin", "/admin")
+        except Exception as e:
+            print(f"  SKIP admin: {e}")
+
+        try:
+            shot("settings", "/settings")
+        except Exception as e:
+            print(f"  SKIP settings: {e}")
+
+        try:
+            def scroll_ldap():
+                page.evaluate("document.getElementById('ldap') && document.getElementById('ldap').scrollIntoView()")
+            shot("settings_ldap", "/settings", action=scroll_ldap, wait=0.4)
+        except Exception as e:
+            print(f"  SKIP settings_ldap: {e}")
+
+        try:
+            shot("activity", "/activity")
+        except Exception as e:
+            print(f"  SKIP activity: {e}")
+
+        try:
+            shot("guide", "/guide")
+        except Exception as e:
+            print(f"  SKIP guide: {e}")
 
         browser.close()
-        print("Done.")
+        print("\nDone.")
 
 
 if __name__ == "__main__":
