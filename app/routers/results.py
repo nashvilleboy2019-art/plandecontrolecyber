@@ -10,48 +10,48 @@ from app.utils import (
     current_period, periode_label, get_config,
 )
 from app.templates_config import templates
+from fastapi.responses import JSONResponse
 
 router = APIRouter(tags=["results"])
 
 
-def _jira_create_ticket(db, control: Control, result: ControlResult):
-    if get_config(db, "jira_enabled", "0") != "1":
+def _ev_create_ticket(db, control: Control, result: ControlResult):
+    if get_config(db, "ev_enabled", "0") != "1":
         return None
     try:
         import requests as req
-        url = get_config(db, "jira_url", "").rstrip("/")
-        token = get_config(db, "jira_api_token", "")
-        project = get_config(db, "jira_project_key", "")
-        email = get_config(db, "jira_user_email", "")
-        if not all([url, token, project, email]):
+        url = get_config(db, "ev_url", "").rstrip("/")
+        account = get_config(db, "ev_account", "")
+        login = get_config(db, "ev_login", "")
+        password = get_config(db, "ev_password", "")
+        catalog_code = get_config(db, "ev_catalog_code", "")
+        if not all([url, account, login, password, catalog_code]):
             return None
-        payload = {
-            "fields": {
-                "project": {"key": project},
-                "summary": f"[PDC] Non-conformité – {control.reference} – {result.periode_label}",
-                "description": {
-                    "type": "doc", "version": 1,
-                    "content": [{"type": "paragraph", "content": [
-                        {"type": "text", "text": (
-                            f"Contrôle: {control.libelle}\n"
-                            f"Période: {result.periode_label}\n"
-                            f"Taux: {result.taux_conformite}%\n"
-                            f"Commentaire: {result.commentaire or '-'}"
-                        )}
-                    ]}]
-                },
-                "issuetype": {"name": "Task"},
-            }
+        description = (
+            f"Contrôle: {control.reference} – {control.libelle}\n"
+            f"Période: {result.periode_label}\n"
+            f"Taux: {result.taux_conformite}%\n"
+            f"Commentaire: {result.commentaire or '-'}"
+        )
+        entry = {
+            "Catalog_Code": catalog_code,
+            "Description": description,
+            "External_reference": f"PDC-{result.id}",
         }
+        requestor_mail = get_config(db, "ev_requestor_mail", "")
+        if requestor_mail:
+            entry["Requestor_Mail"] = requestor_mail
         resp = req.post(
-            f"{url}/rest/api/3/issue",
-            json=payload,
-            auth=(email, token),
+            f"{url}/api/v1/{account}/requests",
+            json={"requests": [entry]},
+            auth=(login, password),
             headers={"Content-Type": "application/json"},
             timeout=10,
         )
         if resp.status_code == 201:
-            return resp.json().get("key")
+            href = resp.json().get("HREF", "")
+            # Extract numeric ID from HREF: https://server/api/v1/account/requests/123
+            return href.rstrip("/").split("/")[-1] if href else None
     except Exception:
         pass
     return None
@@ -102,7 +102,7 @@ async def new_result_form(
         "annee": annee, "mois": mois,
         "periode_label_str": periode_label(c.frequence, annee, mois),
         "error": None,
-        "jira_enabled": get_config(db, "jira_enabled", "0") == "1",
+        "ev_enabled": get_config(db, "ev_enabled", "0") == "1",
     })
 
 
@@ -111,7 +111,7 @@ async def submit_result(
     request: Request, control_id: int, db: Session = Depends(get_db),
     annee: int = Form(...), mois: int = Form(...),
     taux_conformite: float = Form(None), statut: str = Form("en_attente"),
-    commentaire: str = Form(""), create_jira: str = Form(""),
+    commentaire: str = Form(""), create_ev: str = Form(""),
 ):
     user = get_current_user(request, db)
     if not user:
@@ -170,9 +170,9 @@ async def submit_result(
 
     db.flush()
 
-    # JIRA ticket for non-conformance
-    if create_jira == "1" and statut == "non_conforme" and not result.jira_ticket:
-        ticket = _jira_create_ticket(db, c, result)
+    # EasyVista ticket for non-conformance
+    if create_ev == "1" and statut == "non_conforme" and not result.jira_ticket:
+        ticket = _ev_create_ticket(db, c, result)
         if ticket:
             result.jira_ticket = ticket
 
@@ -185,7 +185,7 @@ async def submit_result(
 @router.post("/controls/{control_id}/results/{result_id}/open-incident")
 async def open_incident(
     request: Request, control_id: int, result_id: int, db: Session = Depends(get_db),
-    create_jira: str = Form(""),
+    create_ev: str = Form(""),
     incident_ref: str = Form(""),
 ):
     user = get_current_user(request, db)
@@ -205,8 +205,8 @@ async def open_incident(
         if incident_ref.strip():
             r.incident_ref = incident_ref.strip()
 
-        if create_jira == "1" and not r.jira_ticket:
-            ticket = _jira_create_ticket(db, c, r)
+        if create_ev == "1" and not r.jira_ticket:
+            ticket = _ev_create_ticket(db, c, r)
             if ticket:
                 r.jira_ticket = ticket
 
@@ -223,6 +223,52 @@ async def open_incident(
             f" – {ref_info}" if ref_info else ""
         )
     return RedirectResponse(f"/controls/{control_id}", status_code=302)
+
+
+@router.get("/controls/{control_id}/results/{result_id}/ev-incident")
+async def ev_incident_detail(
+    request: Request, control_id: int, result_id: int, db: Session = Depends(get_db),
+):
+    user = get_current_user(request, db)
+    if not user:
+        return JSONResponse({"error": "Non autorisé"}, status_code=401)
+    r = db.query(ControlResult).filter(
+        ControlResult.id == result_id, ControlResult.control_id == control_id
+    ).first()
+    if not r or not r.jira_ticket:
+        return JSONResponse({"error": "Aucun ticket EasyVista associé"}, status_code=404)
+    url = get_config(db, "ev_url", "").rstrip("/")
+    account = get_config(db, "ev_account", "")
+    login = get_config(db, "ev_login", "")
+    password = get_config(db, "ev_password", "")
+    if not all([url, account, login, password]):
+        return JSONResponse({"error": "EasyVista non configuré"}, status_code=503)
+    try:
+        import requests as req
+        resp = req.get(
+            f"{url}/api/v1/{account}/requests/{r.jira_ticket}",
+            auth=(login, password),
+            headers={"Accept": "application/json"},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            rec = data.get("record", data)
+            requestor = rec.get("REQUESTOR", "")
+            if isinstance(requestor, dict):
+                requestor = requestor.get("FULL_NAME", "")
+            return JSONResponse({
+                "id": r.jira_ticket,
+                "rfc_number": rec.get("RFC_NUMBER", ""),
+                "status": rec.get("STATUS_FR", rec.get("STATUS", "")),
+                "description": rec.get("DESCRIPTION", ""),
+                "submit_date": rec.get("SUBMIT_DATE", ""),
+                "last_update": rec.get("LAST_UPDATE", ""),
+                "requestor": requestor,
+            })
+        return JSONResponse({"error": f"EasyVista HTTP {resp.status_code}"}, status_code=502)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @router.post("/controls/{control_id}/results/{result_id}/validate")

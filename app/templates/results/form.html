@@ -122,12 +122,12 @@
                          focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none">{{ result.commentaire if result else '' }}</textarea>
       </div>
 
-      {% if jira_enabled %}
-      <div class="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <input type="checkbox" name="create_jira" value="1" id="create_jira"
-               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-        <label for="create_jira" class="text-sm text-blue-800">
-          Créer automatiquement un ticket JIRA en cas de non-conformité
+      {% if ev_enabled %}
+      <div class="flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+        <input type="checkbox" name="create_ev" value="1" id="create_ev"
+               class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+        <label for="create_ev" class="text-sm text-purple-800">
+          Créer automatiquement un ticket EasyVista en cas de non-conformité
         </label>
       </div>
       {% endif %}

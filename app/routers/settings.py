@@ -142,22 +142,24 @@ async def test_ldap(request: Request, db: Session = Depends(get_db)):
     return RedirectResponse("/settings", status_code=302)
 
 
-@router.post("/jira")
-async def save_jira(
+@router.post("/easyvista")
+async def save_easyvista(
     request: Request, db: Session = Depends(get_db),
-    jira_enabled: str = Form("0"),
-    jira_url: str = Form(""), jira_api_token: str = Form(""),
-    jira_project_key: str = Form(""), jira_user_email: str = Form(""),
+    ev_enabled: str = Form("0"),
+    ev_url: str = Form(""), ev_account: str = Form(""),
+    ev_login: str = Form(""), ev_password: str = Form(""),
+    ev_catalog_code: str = Form(""), ev_requestor_mail: str = Form(""),
 ):
     user = get_current_user(request, db)
     if not user or user.role != "responsable":
         return RedirectResponse("/dashboard", status_code=302)
     for key, val in {
-        "jira_enabled": jira_enabled, "jira_url": jira_url,
-        "jira_api_token": jira_api_token, "jira_project_key": jira_project_key,
-        "jira_user_email": jira_user_email,
+        "ev_enabled": ev_enabled, "ev_url": ev_url,
+        "ev_account": ev_account, "ev_login": ev_login,
+        "ev_password": ev_password, "ev_catalog_code": ev_catalog_code,
+        "ev_requestor_mail": ev_requestor_mail,
     }.items():
         set_config(db, key, val)
-    log_activity(db, user.id, user.username, "Modification config JIRA")
-    request.session["flash"] = "Configuration JIRA sauvegardée"
+    log_activity(db, user.id, user.username, "Modification config EasyVista")
+    request.session["flash"] = "Configuration EasyVista sauvegardée"
     return RedirectResponse("/settings", status_code=302)

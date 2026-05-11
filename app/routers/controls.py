@@ -153,7 +153,7 @@ async def control_detail(request: Request, control_id: int, db: Session = Depend
         "request": request, "user": user, "control": c,
         "alert": get_alert_status(c, db),
         "flash": request.session.pop("flash", None),
-        "jira_enabled": get_config(db, "jira_enabled", "0") == "1",
+        "ev_enabled": get_config(db, "ev_enabled", "0") == "1",
     })
 
 
