@@ -513,23 +513,25 @@
   // Monthly completion by category (stacked bar)
   const catDone = {{ stats.cat_monthly_done | tojson }};
   const catTodo = {{ stats.cat_monthly_todo | tojson }};
+  console.log('[PDC] catDone:', JSON.stringify(catDone));
+  console.log('[PDC] catTodo:', JSON.stringify(catTodo));
   const catPalette = ['#6366f1','#06b6d4','#10b981','#f59e0b','#ef4444','#a855f7','#f97316'];
-  const catPaletteFade = ['#e0e7ff','#cffafe','#d1fae5','#fef3c7','#fee2e2','#f3e8ff','#ffedd5'];
   const catDatasets = [];
   catDone.forEach((cat, i) => {
+    const color = catPalette[i % catPalette.length];
     catDatasets.push({
       label: cat.label + ' – Réalisés',
       data: cat.data,
-      backgroundColor: catPalette[i % catPalette.length],
+      backgroundColor: color,
       stack: cat.label,
       borderRadius: 3,
     });
     catDatasets.push({
       label: cat.label + ' – Non effectués',
       data: catTodo[i].data,
-      backgroundColor: catPaletteFade[i % catPaletteFade.length],
-      borderColor: catPalette[i % catPalette.length],
-      borderWidth: 1,
+      backgroundColor: color + '55',
+      borderColor: color,
+      borderWidth: 2,
       stack: cat.label,
       borderRadius: 3,
     });
