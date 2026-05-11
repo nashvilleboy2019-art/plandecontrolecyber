@@ -33,13 +33,13 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 - **Campagne mensuelle** — vue des contrôles à réaliser pour le mois en cours, avec assignation des auditeurs par le responsable
 - **Planification annuelle** — création en masse de toutes les périodes d'un contrôle pour l'année, avec assignation par période
 - **Saisie des résultats** — formulaire de saisie du taux de conformité par période, statut automatique (conforme / non conforme / NA)
-- **Workflow incident** — ouverture d'un incident depuis un résultat non conforme (avec ou sans ticket JIRA), suivi de l'état (en cours / résolu / clôturé)
+- **Workflow incident** — ouverture d'un incident depuis un résultat non conforme (avec ou sans ticket EasyVista), suivi de l'état (en cours / résolu / clôturé)
 - **Clôtures en attente** — file de validation des résultats soumis par les auditeurs
 - **Tableau de bord** — trois onglets : *Vue annuelle* (KPIs, graphiques, top 10 contrôles les moins performants), *Vue mensuelle* (heatmap thématique × mois, top 10 du mois courant), *Indicateurs* (cockpit exécutif cyber avec cartes groupées par domaine, tendance et mini-graphiques)
 - **Journal d'activité** — toutes les actions tracées avec lien direct vers la ressource
 - **Gestion des référentiels** — thématiques, catégories (entités) et périmètres configurables depuis l'administration
 - **Authentification LDAP / SSO** — connexion via Active Directory avec création automatique des comptes, filtrage par OU et groupe AD, fallback local
-- **Intégration JIRA** — création automatique de tickets sur non-conformance (API JIRA Cloud v3)
+- **Intégration EasyVista** — création automatique de tickets incidents sur non-conformance et consultation en temps réel depuis la fiche contrôle (API EasyVista Service Management REST)
 - **Historique** — historique détaillé des modifications sur chaque contrôle et chaque résultat
 - **Archivage** — les contrôles archivés sont masqués mais conservent leur historique
 - **Thème couleurs** — personnalisation de la couleur principale depuis les paramètres
@@ -61,7 +61,7 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 | Journal d'activité | ✓ | ✓ |
 | Tableau de bord | ✓ | ✓ |
 | Gestion des utilisateurs | — | ✓ |
-| Paramètres (logo, thème, JIRA) | — | ✓ |
+| Paramètres (logo, thème, EasyVista) | — | ✓ |
 | Administration (thématiques, catégories, périmètres) | — | ✓ |
 | Archiver un contrôle | — | ✓ |
 
@@ -71,7 +71,7 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 - **Frontend** : Jinja2 · Tailwind CSS (CDN JIT) · Alpine.js v3 · Chart.js 4
 - **Auth** : sessions Starlette · bcrypt · ldap3 (LDAP/AD, optionnel)
 - **Export** : openpyxl (Excel)
-- **Incidents** : requests (JIRA REST API v3, optionnel)
+- **Incidents** : requests (EasyVista REST API, optionnel)
 
 ## Installation
 
@@ -158,7 +158,7 @@ plandecontrole/
 │       ├── admin.py              # thématiques, catégories, périmètres
 │       ├── users.py              # gestion comptes
 │       ├── activity.py           # journal d'activité
-│       └── settings.py           # logo, thème, JIRA
+│       └── settings.py           # logo, thème, EasyVista
 ├── app/templates/
 │   ├── base.html                 # layout, navbar, flash messages
 │   ├── dashboard.html
@@ -202,16 +202,24 @@ non_conforme
 
 Un incident peut être lié à :
 - Un **numéro d'incident** saisi manuellement (éditable après ouverture)
-- Un **ticket JIRA** créé automatiquement via l'API (si JIRA configuré dans les paramètres)
+- Un **ticket EasyVista** créé automatiquement via l'API (si EasyVista configuré dans les paramètres)
 
-## Intégration JIRA
+## Intégration EasyVista
 
-Depuis **Paramètres → JIRA**, configurer :
-- URL de l'instance JIRA (`https://xxx.atlassian.net`)
-- E-mail utilisateur et token API
-- Clé du projet JIRA
+Depuis **Paramètres → EasyVista**, configurer :
 
-Lors de l'ouverture d'un incident, cocher "Pousser un ticket JIRA" pour créer automatiquement un ticket avec le détail du contrôle non conforme.
+| Champ | Description |
+|---|---|
+| URL EasyVista | Ex. `https://votre-domaine.easyvista.com` |
+| Account ID | Identifiant de compte visible dans l'URL de l'API (`/api/v1/{account}/...`) |
+| Code catalogue | Code du service catalogue incidents (ex. `INC-001`) |
+| Login | Login du compte de service |
+| Mot de passe | Mot de passe (Basic Auth) |
+| Email demandeur | Optionnel — compte affiché comme demandeur dans EasyVista |
+
+**Ouverture** : lors d'un résultat non conforme, cocher *Ouvrir un ticket EasyVista* dans la modale ou le formulaire de saisie. Le ticket est créé via `POST /api/v1/{account}/requests` et la référence est sauvegardée.
+
+**Consultation** : sur chaque résultat avec un ticket EasyVista associé, le bouton **Consulter** ouvre une modale qui interroge l'API EasyVista en temps réel et affiche statut, demandeur, dates et description.
 
 ## Authentification LDAP / SSO
 

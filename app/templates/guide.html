@@ -49,7 +49,7 @@
           <a href="#utilisateurs" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Utilisateurs</a>
           <a href="#parametres" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ Paramètres</a>
           <a href="#ldap" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ LDAP / SSO</a>
-          <a href="#jira" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ JIRA</a>
+          <a href="#easyvista" class="block text-gray-500 hover:text-indigo-600 py-0.5 pl-3">→ EasyVista</a>
           <a href="#activite" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">Journal d'activité</a>
           <a href="#faq" class="block text-gray-600 hover:text-indigo-600 py-0.5 font-medium">FAQ</a>
         </nav>
@@ -178,7 +178,7 @@
               <tr class="bg-gray-50"><td class="px-4 py-2.5 text-gray-700">Archiver un contrôle</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
               <tr><td class="px-4 py-2.5 text-gray-700">Gérer les utilisateurs</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
               <tr class="bg-gray-50"><td class="px-4 py-2.5 text-gray-700">Administration (thématiques, catégories, périmètres)</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
-              <tr><td class="px-4 py-2.5 text-gray-700">Paramètres (logo, thème, JIRA)</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
+              <tr><td class="px-4 py-2.5 text-gray-700">Paramètres (logo, thème, EasyVista)</td><td class="text-center text-gray-300">—</td><td class="text-center text-emerald-600 font-bold">✓</td></tr>
             </tbody>
           </table>
         </div>
@@ -351,7 +351,7 @@
             <ol class="list-decimal list-inside space-y-2">
               <li>Sur la fiche du contrôle, cliquer sur <strong>⚠ Ouvrir incident</strong> (colonne Clôturé)</li>
               <li>Dans la fenêtre modale, saisir un numéro d'incident existant (ex. <code class="bg-gray-100 px-1 rounded font-mono text-xs">INC-2026-042</code>) — optionnel</li>
-              <li>Si JIRA est configuré, cocher <strong>Pousser un ticket JIRA</strong> pour créer automatiquement un ticket</li>
+              <li>Si EasyVista est configuré, cocher <strong>Ouvrir un ticket EasyVista</strong> pour créer automatiquement un incident</li>
               <li>Cliquer sur <strong>Ouvrir l'incident</strong></li>
             </ol>
           </div>
@@ -361,8 +361,8 @@
             <p>Une fois l'incident ouvert, le numéro de référence s'affiche dans la colonne <strong>N° Incident</strong>. Si le numéro n'a pas été saisi lors de l'ouverture, un bouton <em>+ Ajouter N°</em> permet de le renseigner ultérieurement.</p>
           </div>
 
-          <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-blue-800 text-xs">
-            Un incident peut être lié à un numéro manuel ET à un ticket JIRA simultanément.
+          <div class="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 text-purple-800 text-xs">
+            Un incident peut être lié à un numéro manuel ET à un ticket EasyVista. Le bouton <strong>Consulter</strong> (badge violet) interroge l'API EasyVista en temps réel pour afficher le statut, le demandeur et les dates de l'incident.
           </div>
         </div>
       </section>
@@ -453,7 +453,7 @@
             <h3 class="font-semibold text-gray-800 mb-2">Alertes et incidents</h3>
             <ul class="list-disc list-inside space-y-1 text-xs">
               <li><strong>Contrôles en retard</strong> — contrôles dont l'échéance est dépassée</li>
-              <li><strong>Incidents en cours</strong> — résultats non conformes avec un incident ouvert, affichés avec leur N° incident et ticket JIRA</li>
+              <li><strong>Incidents en cours</strong> — résultats non conformes avec un incident ouvert, affichés avec leur N° incident et ticket EasyVista</li>
               <li><strong>Échéance proche</strong> — contrôles dont la prochaine échéance tombe dans moins de 7 jours</li>
             </ul>
           </div>
@@ -662,28 +662,40 @@
         </div>
       </section>
 
-      <!-- ─── JIRA ───────────────────────────────────────────────────── -->
-      <section id="jira">
-        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Intégration JIRA</h2>
+      <!-- ─── EasyVista ─────────────────────────────────────────────── -->
+      <section id="easyvista">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">Intégration EasyVista</h2>
         <div class="space-y-4 text-gray-600">
-          <p>Lorsque JIRA est configuré, l'ouverture d'un incident sur un résultat non conforme peut créer automatiquement un ticket dans votre projet JIRA (API REST v3 — JIRA Cloud).</p>
+          <p>Lorsqu'EasyVista est configuré, l'application peut créer automatiquement un ticket incident dans EasyVista Service Management lors d'une non-conformité, et consulter l'état de cet incident en temps réel depuis la fiche contrôle.</p>
 
           <div>
-            <h3 class="font-semibold text-gray-800 mb-2">Configuration (Paramètres → JIRA)</h3>
+            <h3 class="font-semibold text-gray-800 mb-2">Configuration (Paramètres → EasyVista)</h3>
             <div class="overflow-hidden rounded-xl border border-gray-200">
               <table class="w-full text-xs">
                 <tbody class="divide-y divide-gray-100">
-                  <tr><td class="px-4 py-2.5 font-medium text-gray-800 w-40">URL JIRA</td><td class="px-4 py-2.5 text-gray-600">Ex. <code class="bg-gray-100 px-1 rounded font-mono">https://monentite.atlassian.net</code></td></tr>
-                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Email utilisateur</td><td class="px-4 py-2.5 text-gray-600">Compte de service JIRA</td></tr>
-                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Token API</td><td class="px-4 py-2.5 text-gray-600">Généré depuis votre profil Atlassian (<em>Sécurité → Tokens API</em>)</td></tr>
-                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Clé projet</td><td class="px-4 py-2.5 text-gray-600">Ex. <code class="bg-gray-100 px-1 rounded font-mono">SEC</code> — visible dans les paramètres du projet JIRA</td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800 w-44">URL EasyVista</td><td class="px-4 py-2.5 text-gray-600">Ex. <code class="bg-gray-100 px-1 rounded font-mono">https://votre-domaine.easyvista.com</code></td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Account ID</td><td class="px-4 py-2.5 text-gray-600">Identifiant de compte visible dans l'URL de l'API : <code class="bg-gray-100 px-1 rounded font-mono">/api/v1/{account}/...</code></td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Code catalogue</td><td class="px-4 py-2.5 text-gray-600">Code du service catalogue incidents (ex. <code class="bg-gray-100 px-1 rounded font-mono">INC-001</code>)</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Login</td><td class="px-4 py-2.5 text-gray-600">Login du compte de service EasyVista</td></tr>
+                  <tr><td class="px-4 py-2.5 font-medium text-gray-800">Mot de passe</td><td class="px-4 py-2.5 text-gray-600">Authentification Basic Auth (login / mot de passe)</td></tr>
+                  <tr class="bg-gray-50"><td class="px-4 py-2.5 font-medium text-gray-800">Email demandeur</td><td class="px-4 py-2.5 text-gray-600">Optionnel — affiché comme demandeur dans EasyVista</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-blue-800 text-xs">
-            Le ticket créé contient le libellé du contrôle, la période, le taux de conformité et le commentaire. Il est de type <em>Task</em> dans le projet configuré.
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Ouverture d'un ticket</h3>
+            <p class="text-xs">Lors de la saisie d'un résultat non conforme ou depuis la modale <em>Ouvrir incident</em>, cocher <strong>Ouvrir un ticket EasyVista</strong>. L'application appelle <code class="bg-gray-100 px-1 rounded font-mono">POST /api/v1/{account}/requests</code> avec le libellé du contrôle, la période, le taux et le commentaire. La référence du ticket est sauvegardée et affichée en badge violet sur la fiche.</p>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">Consultation en temps réel</h3>
+            <p class="text-xs">Sur chaque résultat portant un badge EV violet, le bouton <strong>Consulter</strong> ouvre une modale qui interroge <code class="bg-gray-100 px-1 rounded font-mono">GET /api/v1/{account}/requests/{id}</code> et affiche le statut, le demandeur, la date d'ouverture, la dernière mise à jour et la description de l'incident.</p>
+          </div>
+
+          <div class="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 text-purple-800 text-xs">
+            Les erreurs de création ou de consultation EasyVista sont gérées silencieusement — elles ne bloquent pas la saisie ni la navigation.
           </div>
         </div>
       </section>
@@ -715,8 +727,8 @@
              "Oui, mais il faut d'abord le rouvrir (bouton Rouvrir, responsable uniquement). La clôture est alors annulée et le résultat peut être modifié ou resaisi."),
             ("Comment changer un mot de passe utilisateur ?",
              "Via Utilisateurs (icône en haut à droite) : cliquer sur Modifier à côté du compte, renseigner le nouveau mot de passe et valider. Laisser le champ vide pour le conserver sans changement."),
-            ("Mon ticket JIRA n'est pas créé, que vérifier ?",
-             "1) Vérifiez que JIRA est activé dans Paramètres → JIRA. 2) Contrôlez l'URL (avec https://), l'email, le token API et la clé du projet. 3) Assurez-vous que le compte de service a les droits de création de tickets dans le projet JIRA. Les erreurs de création sont ignorées silencieusement pour ne pas bloquer la saisie."),
+            ("Mon ticket EasyVista n'est pas créé, que vérifier ?",
+             "1) Vérifiez qu'EasyVista est activé dans Paramètres → EasyVista. 2) Contrôlez l'URL, l'Account ID, le code catalogue, le login et le mot de passe. 3) Assurez-vous que le compte de service a les droits de création dans EasyVista. Les erreurs sont ignorées silencieusement pour ne pas bloquer la saisie."),
             ("Comment rendre l'application accessible depuis d'autres postes ?",
              "La variable PDC_HOST est déjà à 0.0.0.0 par défaut — l'application est accessible sur le réseau local via http://[IP_DU_SERVEUR]:8002. Assurez-vous que le pare-feu autorise le port 8002."),
             ("Que faire si l'application ne démarre pas ?",
