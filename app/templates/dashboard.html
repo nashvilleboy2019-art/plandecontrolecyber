@@ -524,12 +524,12 @@
       stack: cat.label,
       borderRadius: 3,
     });
-  });
-  catTodo.forEach((cat, i) => {
     catDatasets.push({
       label: cat.label + ' – Non effectués',
-      data: cat.data,
+      data: catTodo[i].data,
       backgroundColor: catPaletteFade[i % catPaletteFade.length],
+      borderColor: catPalette[i % catPalette.length],
+      borderWidth: 1,
       stack: cat.label,
       borderRadius: 3,
     });
