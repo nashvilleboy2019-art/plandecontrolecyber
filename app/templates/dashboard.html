@@ -546,8 +546,8 @@
         legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } },
       },
       scales: {
-        x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, ticks: { stepSize: 1 }, grid: { color: '#f3f4f6' } }
+        x: { grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f3f4f6' } }
       }
     }
   });
