@@ -112,31 +112,32 @@ if answer == "o":
         }]
     }
     print(f"\n  Payload envoyé :\n{json.dumps(payload, indent=4, ensure_ascii=False)}")
-    # Bearer
+    print("  (timeout 30s — le serveur EasyVista peut être lent sur POST)")
+    post_ok = False
     try:
-        r = requests.post(
+        rpost = requests.post(
             target,
             json=payload,
             headers={"Content-Type": "application/json", "Authorization": f"Bearer {TOKEN}"},
-            timeout=10,
+            timeout=30,
             verify=False,
         )
-        print_response("Bearer token → POST /requests", r)
+        print_response("Bearer token → POST /requests", rpost)
+        post_ok = rpost.status_code == 201
     except Exception as e:
         print(f"\n  ERREUR réseau : {e}")
-    # Basic si Bearer a échoué
-    if r.status_code != 201:
-        print(f"\n  Bearer a échoué ({r.status_code}), essai Basic Auth…")
+    if not post_ok:
+        print(f"\n  Bearer POST n'a pas abouti, essai Basic Auth…")
         try:
-            r2 = requests.post(
+            rpost2 = requests.post(
                 target,
                 json=payload,
                 headers={"Content-Type": "application/json"},
                 auth=(LOGIN, TOKEN),
-                timeout=10,
+                timeout=30,
                 verify=False,
             )
-            print_response("Basic Auth → POST /requests", r2)
+            print_response("Basic Auth → POST /requests", rpost2)
         except Exception as e:
             print(f"\n  ERREUR réseau : {e}")
 else:

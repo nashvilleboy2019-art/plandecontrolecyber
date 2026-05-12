@@ -51,7 +51,7 @@ def _ev_create_ticket(db, control: Control, result: ControlResult, catalog_code:
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}",
             },
-            timeout=10,
+            timeout=30,
             verify=False,
         )
         if resp.status_code == 201:
