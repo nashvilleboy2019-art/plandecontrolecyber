@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse
 router = APIRouter(tags=["results"])
 
 
-def _ev_create_ticket(db, control: Control, result: ControlResult):
+def _ev_create_ticket(db, control: Control, result: ControlResult, catalog_code: str = ""):
     if get_config(db, "ev_enabled", "0") != "1":
         return None
     try:
@@ -27,7 +27,6 @@ def _ev_create_ticket(db, control: Control, result: ControlResult):
         account = get_config(db, "ev_account", "")
         login = get_config(db, "ev_login", "")
         token = get_config(db, "ev_token", "")
-        catalog_code = get_config(db, "ev_catalog_code", "")
         if not all([url, account, login, token, catalog_code]):
             return None
         description = (
@@ -38,6 +37,7 @@ def _ev_create_ticket(db, control: Control, result: ControlResult):
         )
         entry = {
             "Catalog_Code": catalog_code,
+            "Title": f"Non-conformité {control.reference} – {result.periode_label}",
             "Description": description,
             "External_reference": f"PDC-{result.id}",
         }
@@ -118,6 +118,7 @@ async def submit_result(
     annee: int = Form(...), mois: int = Form(...),
     taux_conformite: float = Form(None), statut: str = Form("en_attente"),
     commentaire: str = Form(""), create_ev: str = Form(""),
+    catalog_code: str = Form(""),
 ):
     user = get_current_user(request, db)
     if not user:
@@ -179,7 +180,7 @@ async def submit_result(
     # EasyVista ticket for non-conformance
     ev_msg = ""
     if create_ev == "1" and statut == "non_conforme" and not result.jira_ticket:
-        ticket = _ev_create_ticket(db, c, result)
+        ticket = _ev_create_ticket(db, c, result, catalog_code)
         if ticket:
             result.jira_ticket = ticket
             ev_msg = f" – Ticket EasyVista #{ticket} créé"
@@ -197,6 +198,7 @@ async def open_incident(
     request: Request, control_id: int, result_id: int, db: Session = Depends(get_db),
     create_ev: str = Form(""),
     incident_ref: str = Form(""),
+    catalog_code: str = Form(""),
 ):
     user = get_current_user(request, db)
     if not user or user.role != "responsable":
@@ -217,7 +219,7 @@ async def open_incident(
 
         ev_msg = ""
         if create_ev == "1" and not r.jira_ticket:
-            ticket = _ev_create_ticket(db, c, r)
+            ticket = _ev_create_ticket(db, c, r, catalog_code)
             if ticket:
                 r.jira_ticket = ticket
                 ev_msg = f" – Ticket EasyVista #{ticket} créé"

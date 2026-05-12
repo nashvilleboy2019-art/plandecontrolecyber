@@ -123,12 +123,28 @@
       </div>
 
       {% if ev_enabled %}
-      <div class="flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-        <input type="checkbox" name="create_ev" value="1" id="create_ev"
-               class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
-        <label for="create_ev" class="text-sm text-purple-800">
-          Créer automatiquement un ticket EasyVista en cas de non-conformité
-        </label>
+      <div x-data="{ createEv: false }" class="space-y-2">
+        <div class="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+          <input type="checkbox" x-model="createEv" name="create_ev" value="1" id="create_ev"
+                 class="mt-0.5 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+          <label for="create_ev" class="text-sm text-purple-800 cursor-pointer">
+            <span class="font-medium">Créer automatiquement un ticket EasyVista en cas de non-conformité</span>
+          </label>
+        </div>
+        <div x-show="createEv" x-cloak class="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+          <label class="block text-xs font-medium text-purple-800 mb-1.5">
+            Sujet du ticket <span class="text-red-500">*</span>
+          </label>
+          <select name="catalog_code" :required="createEv"
+                  class="w-full text-sm border border-purple-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-purple-400 focus:outline-none">
+            <option value="">— Choisir un sujet —</option>
+            <option value="DSO_CTRL_CNFRMT_ERR_REF">Erreur référentiel</option>
+            <option value="DSO_CTRL_CNFRMT_NN_RSPCT_PROC">Non-respect de la procédure</option>
+            <option value="DSO_CTRL_CNFRMT_PRM_CNFG_ABTI">Paramétrage / configuration non abouti</option>
+            <option value="DSO_CTRL_CNFRMT_NDQTN_CNFNCE">Accès logiques inadéquats (rôle de confiance)</option>
+            <option value="DSO_CTRL_CNFRMT_SUPPR_TRDV">Suppression tardive d'identifiant</option>
+          </select>
+        </div>
       </div>
       {% endif %}
     </div>

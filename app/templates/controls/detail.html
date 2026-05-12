@@ -345,7 +345,7 @@
                   </form>
                 {% endif %}
               </td>
-              <td class="px-4 py-3 text-center" x-data="{ showModal: false }">
+              <td class="px-4 py-3 text-center" x-data="{ showModal: false, createEv: false }">
                 {% if r.validated %}
                   <div class="flex flex-col items-center gap-0.5">
                     <span class="text-xs font-medium {% if r.statut == 'incident_en_cours' %}text-orange-600{% else %}text-green-600{% endif %}">
@@ -402,13 +402,29 @@
 
                             {% if ev_enabled %}
                             <!-- Option 2 : ouvrir ticket EasyVista -->
-                            <div class="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                              <input type="checkbox" name="create_ev" value="1" id="ev_cb_{{ r.id }}"
-                                     class="mt-0.5 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
-                              <label for="ev_cb_{{ r.id }}" class="text-sm text-purple-800 cursor-pointer">
-                                <span class="font-medium">Ouvrir un ticket EasyVista</span>
-                                <span class="block text-xs text-purple-600 mt-0.5">Crée automatiquement un incident dans EasyVista Service Management</span>
-                              </label>
+                            <div class="space-y-2">
+                              <div class="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                <input type="checkbox" x-model="createEv" name="create_ev" value="1" id="ev_cb_{{ r.id }}"
+                                       class="mt-0.5 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                                <label for="ev_cb_{{ r.id }}" class="text-sm text-purple-800 cursor-pointer">
+                                  <span class="font-medium">Ouvrir un ticket EasyVista</span>
+                                  <span class="block text-xs text-purple-600 mt-0.5">Crée automatiquement un incident dans EasyVista Service Management</span>
+                                </label>
+                              </div>
+                              <div x-show="createEv" x-cloak class="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                <label class="block text-xs font-medium text-purple-800 mb-1.5">
+                                  Sujet du ticket <span class="text-red-500">*</span>
+                                </label>
+                                <select name="catalog_code" :required="createEv"
+                                        class="w-full text-sm border border-purple-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-purple-400 focus:outline-none">
+                                  <option value="">— Choisir un sujet —</option>
+                                  <option value="DSO_CTRL_CNFRMT_ERR_REF">Erreur référentiel</option>
+                                  <option value="DSO_CTRL_CNFRMT_NN_RSPCT_PROC">Non-respect de la procédure</option>
+                                  <option value="DSO_CTRL_CNFRMT_PRM_CNFG_ABTI">Paramétrage / configuration non abouti</option>
+                                  <option value="DSO_CTRL_CNFRMT_NDQTN_CNFNCE">Accès logiques inadéquats (rôle de confiance)</option>
+                                  <option value="DSO_CTRL_CNFRMT_SUPPR_TRDV">Suppression tardive d'identifiant</option>
+                                </select>
+                              </div>
                             </div>
                             {% else %}
                             <p class="text-xs text-gray-400 italic">EasyVista non configuré – renseignez les paramètres dans Paramètres &rarr; EasyVista.</p>

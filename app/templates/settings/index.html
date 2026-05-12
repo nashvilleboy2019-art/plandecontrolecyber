@@ -222,19 +222,12 @@
                    placeholder="https://votre-domaine.easyvista.com"
                    class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
           </div>
-          <div>
+          <div class="sm:col-span-2">
             <label class="block text-xs font-medium text-gray-600 mb-1">Identifiant compte (Account ID)</label>
             <input type="text" name="ev_account" value="{{ cfg.get('ev_account','') }}"
                    placeholder="50005"
                    class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
             <p class="text-xs text-gray-400 mt-1">Visible dans l'URL : /api/v1/<strong>{account}</strong>/requests</p>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Code catalogue incidents</label>
-            <input type="text" name="ev_catalog_code" value="{{ cfg.get('ev_catalog_code','') }}"
-                   placeholder="INC-001"
-                   class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none">
-            <p class="text-xs text-gray-400 mt-1">Code du service catalogue pour les incidents de sécurité</p>
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">Login du compte de service</label>

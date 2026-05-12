@@ -148,7 +148,7 @@ async def save_easyvista(
     ev_enabled: str = Form("0"),
     ev_url: str = Form(""), ev_account: str = Form(""),
     ev_login: str = Form(""), ev_token: str = Form(""),
-    ev_catalog_code: str = Form(""), ev_requestor_mail: str = Form(""),
+    ev_requestor_mail: str = Form(""),
 ):
     user = get_current_user(request, db)
     if not user or user.role != "responsable":
@@ -156,7 +156,7 @@ async def save_easyvista(
     for key, val in {
         "ev_enabled": ev_enabled, "ev_url": ev_url,
         "ev_account": ev_account, "ev_login": ev_login,
-        "ev_token": ev_token, "ev_catalog_code": ev_catalog_code,
+        "ev_token": ev_token,
         "ev_requestor_mail": ev_requestor_mail,
     }.items():
         set_config(db, key, val)
