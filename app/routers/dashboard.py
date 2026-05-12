@@ -77,42 +77,6 @@ def _build_stats(db: Session, year: int = None):
         ControlResult.taux_conformite.isnot(None),
     ).count()
 
-    # Monthly completion count per category (réalisés / non réalisés)
-    cat_monthly_done = []
-    cat_monthly_todo = []
-    for cat in cats:
-        done_by_month = []
-        todo_by_month = []
-        for m in range(1, 13):
-            done = (
-                db.query(ControlResult)
-                .join(Control, ControlResult.control_id == Control.id)
-                .filter(
-                    Control.category_id == cat.id,
-                    Control.archived == False,
-                    ControlResult.annee == year,
-                    ControlResult.mois == m,
-                    ControlResult.taux_conformite.isnot(None),
-                )
-                .count()
-            )
-            todo = (
-                db.query(ControlResult)
-                .join(Control, ControlResult.control_id == Control.id)
-                .filter(
-                    Control.category_id == cat.id,
-                    Control.archived == False,
-                    ControlResult.annee == year,
-                    ControlResult.mois == m,
-                    ControlResult.taux_conformite.is_(None),
-                )
-                .count()
-            )
-            done_by_month.append(done)
-            todo_by_month.append(todo)
-        cat_monthly_done.append({"label": cat.label, "data": done_by_month})
-        cat_monthly_todo.append({"label": cat.label, "data": todo_by_month})
-
     # Monthly heatmap by type (period start mapped to calendar month)
     def period_start_cal_month(freq, mois):
         if freq == "mensuel": return mois
@@ -120,6 +84,47 @@ def _build_stats(db: Session, year: int = None):
         if freq == "trimestriel": return (mois - 1) * 3 + 1
         if freq == "semestriel": return 1 if mois == 1 else 7
         return 1  # annuel
+
+    # Monthly completion count per category (réalisés / non effectués)
+    # "Non effectué" = contrôle dont le mois m est le début de sa période
+    # mais pour lequel aucun résultat avec taux n'existe pour cette période.
+    def cal_month_to_period_local(freq, cal_month):
+        if freq == "mensuel":    return cal_month
+        if freq == "bimestriel": return (cal_month + 1) // 2
+        if freq == "trimestriel": return (cal_month - 1) // 3 + 1
+        if freq == "semestriel": return 1 if cal_month <= 6 else 2
+        return 1
+
+    # Index (control_id, annee, mois) → taux pour éviter les boucles O(n²)
+    results_done_idx = {
+        (r.control_id, r.annee, r.mois)
+        for c in controls
+        for r in c.results
+        if r.taux_conformite is not None
+    }
+
+    cat_monthly_done = []
+    cat_monthly_todo = []
+    for cat in cats:
+        cat_controls = [c for c in controls if c.category_id == cat.id]
+        done_by_month = []
+        todo_by_month = []
+        for m in range(1, 13):
+            done = 0
+            todo = 0
+            for ctrl in cat_controls:
+                period_idx = cal_month_to_period_local(ctrl.frequence, m)
+                # Ne compter le contrôle que sur le mois de début de sa période
+                if period_start_cal_month(ctrl.frequence, period_idx) != m:
+                    continue
+                if (ctrl.id, year, period_idx) in results_done_idx:
+                    done += 1
+                else:
+                    todo += 1
+            done_by_month.append(done)
+            todo_by_month.append(todo)
+        cat_monthly_done.append({"label": cat.label, "data": done_by_month})
+        cat_monthly_todo.append({"label": cat.label, "data": todo_by_month})
 
     monthly_by_type = []
     for t in types:

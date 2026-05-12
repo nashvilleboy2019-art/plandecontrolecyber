@@ -184,8 +184,10 @@ async def test_easyvista(request: Request, db: Session = Depends(get_db)):
         resp = req.get(
             f"{url}/api/v1/{account}/requests",
             params={"max_rows": 1},
-            auth=(login, token),
-            headers={"Accept": "application/json"},
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
             timeout=8,
             verify=False,
         )

@@ -47,8 +47,10 @@ def _ev_create_ticket(db, control: Control, result: ControlResult):
         resp = req.post(
             f"{url}/api/v1/{account}/requests",
             json={"requests": [entry]},
-            auth=(login, token),
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
             timeout=10,
             verify=False,
         )
@@ -261,8 +263,10 @@ async def ev_incident_detail(
         import requests as req
         resp = req.get(
             f"{url}/api/v1/{account}/requests/{r.jira_ticket}",
-            auth=(login, token),
-            headers={"Accept": "application/json"},
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
             timeout=10,
             verify=False,
         )
