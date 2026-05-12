@@ -239,7 +239,10 @@
               </td>
               <td class="px-4 py-3 text-center" x-data="{ editRef: false, evModal: false, evLoading: false, evInfo: null, evError: '' }">
                 {% if r.jira_ticket %}
-                  <span class="text-xs font-mono bg-purple-100 text-purple-700 px-2 py-0.5 rounded block mb-0.5">EV-{{ r.jira_ticket }}</span>
+                  <span class="text-xs font-mono bg-purple-100 text-purple-700 px-2 py-0.5 rounded block mb-0.5"
+                        x-text="evInfo ? (evInfo.rfc_number ? evInfo.rfc_number : 'EV-{{ r.jira_ticket }}') : 'EV-{{ r.jira_ticket }}'">
+                    EV-{{ r.jira_ticket }}
+                  </span>
                   {% if ev_enabled %}
                   <button @click="
                     evModal = true; evLoading = true; evInfo = null; evError = '';
@@ -268,6 +271,10 @@
                         <div x-show="evError" class="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2" x-text="evError"></div>
                         <dl x-show="evInfo && !evLoading" class="space-y-3 text-sm">
                           <div class="flex justify-between gap-4">
+                            <dt class="text-gray-500 shrink-0">N° incident</dt>
+                            <dd class="font-bold text-purple-700 text-right" x-text="evInfo?.rfc_number || ('EV-' + evInfo?.id) || '—'"></dd>
+                          </div>
+                          <div class="flex justify-between gap-4">
                             <dt class="text-gray-500 shrink-0">Statut</dt>
                             <dd class="font-medium text-gray-800 text-right" x-text="evInfo?.status || '—'"></dd>
                           </div>
@@ -289,7 +296,16 @@
                           </div>
                         </dl>
                       </div>
-                      <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                      <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                        {% if ev_url and ev_account %}
+                        <a :href="'{{ ev_url }}/index.php?action=SHOW&type=INCIDENT&record=' + evInfo?.id"
+                           x-show="evInfo"
+                           target="_blank" rel="noopener"
+                           class="text-xs text-purple-600 hover:text-purple-800 underline">
+                          Ouvrir dans EasyVista ↗
+                        </a>
+                        <span x-show="!evInfo"></span>
+                        {% else %}<span></span>{% endif %}
                         <button @click="evModal = false"
                                 class="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
                           Fermer

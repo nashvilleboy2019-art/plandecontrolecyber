@@ -23,9 +23,9 @@ def _ev_create_ticket(db, control: Control, result: ControlResult):
         url = get_config(db, "ev_url", "").rstrip("/")
         account = get_config(db, "ev_account", "")
         login = get_config(db, "ev_login", "")
-        password = get_config(db, "ev_password", "")
+        token = get_config(db, "ev_token", "")
         catalog_code = get_config(db, "ev_catalog_code", "")
-        if not all([url, account, login, password, catalog_code]):
+        if not all([url, account, login, token, catalog_code]):
             return None
         description = (
             f"Contrôle: {control.reference} – {control.libelle}\n"
@@ -44,7 +44,7 @@ def _ev_create_ticket(db, control: Control, result: ControlResult):
         resp = req.post(
             f"{url}/api/v1/{account}/requests",
             json={"requests": [entry]},
-            auth=(login, password),
+            auth=(login, token),
             headers={"Content-Type": "application/json"},
             timeout=10,
         )
@@ -171,14 +171,18 @@ async def submit_result(
     db.flush()
 
     # EasyVista ticket for non-conformance
+    ev_msg = ""
     if create_ev == "1" and statut == "non_conforme" and not result.jira_ticket:
         ticket = _ev_create_ticket(db, c, result)
         if ticket:
             result.jira_ticket = ticket
+            ev_msg = f" – Ticket EasyVista #{ticket} créé"
+        else:
+            ev_msg = " – Échec création ticket EasyVista"
 
     db.commit()
     log_activity(db, user.id, user.username, "Saisie résultat", "result", result.id, f"{c.reference} – {plabel}")
-    request.session["flash"] = f"Résultat enregistré pour {plabel}"
+    request.session["flash"] = f"Résultat enregistré pour {plabel}{ev_msg}"
     return RedirectResponse(f"/controls/{c.id}", status_code=302)
 
 
@@ -205,10 +209,14 @@ async def open_incident(
         if incident_ref.strip():
             r.incident_ref = incident_ref.strip()
 
+        ev_msg = ""
         if create_ev == "1" and not r.jira_ticket:
             ticket = _ev_create_ticket(db, c, r)
             if ticket:
                 r.jira_ticket = ticket
+                ev_msg = f" – Ticket EasyVista #{ticket} créé"
+            else:
+                ev_msg = " – Échec création ticket EasyVista"
 
         db.add(ResultHistory(
             result_id=r.id, control_id=control_id,
@@ -216,11 +224,13 @@ async def open_incident(
         ))
         db.commit()
 
-        ref_info = r.jira_ticket or r.incident_ref or ""
+        ref_info = r.incident_ref or ""
         log_activity(db, user.id, user.username, "Incident ouvert", "result", r.id,
-                     f"{c.reference} – {r.periode_label}" + (f" – {ref_info}" if ref_info else ""))
-        request.session["flash"] = f"Incident ouvert pour {r.periode_label}" + (
-            f" – {ref_info}" if ref_info else ""
+                     f"{c.reference} – {r.periode_label}" + (f" – EV#{r.jira_ticket}" if r.jira_ticket else ""))
+        request.session["flash"] = (
+            f"Incident ouvert pour {r.periode_label}"
+            + (f" – réf. {ref_info}" if ref_info else "")
+            + ev_msg
         )
     return RedirectResponse(f"/controls/{control_id}", status_code=302)
 
@@ -240,14 +250,14 @@ async def ev_incident_detail(
     url = get_config(db, "ev_url", "").rstrip("/")
     account = get_config(db, "ev_account", "")
     login = get_config(db, "ev_login", "")
-    password = get_config(db, "ev_password", "")
-    if not all([url, account, login, password]):
+    token = get_config(db, "ev_token", "")
+    if not all([url, account, login, token]):
         return JSONResponse({"error": "EasyVista non configuré"}, status_code=503)
     try:
         import requests as req
         resp = req.get(
             f"{url}/api/v1/{account}/requests/{r.jira_ticket}",
-            auth=(login, password),
+            auth=(login, token),
             headers={"Accept": "application/json"},
             timeout=10,
         )

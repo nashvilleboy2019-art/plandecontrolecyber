@@ -147,7 +147,7 @@ async def save_easyvista(
     request: Request, db: Session = Depends(get_db),
     ev_enabled: str = Form("0"),
     ev_url: str = Form(""), ev_account: str = Form(""),
-    ev_login: str = Form(""), ev_password: str = Form(""),
+    ev_login: str = Form(""), ev_token: str = Form(""),
     ev_catalog_code: str = Form(""), ev_requestor_mail: str = Form(""),
 ):
     user = get_current_user(request, db)
@@ -156,10 +156,40 @@ async def save_easyvista(
     for key, val in {
         "ev_enabled": ev_enabled, "ev_url": ev_url,
         "ev_account": ev_account, "ev_login": ev_login,
-        "ev_password": ev_password, "ev_catalog_code": ev_catalog_code,
+        "ev_token": ev_token, "ev_catalog_code": ev_catalog_code,
         "ev_requestor_mail": ev_requestor_mail,
     }.items():
         set_config(db, key, val)
     log_activity(db, user.id, user.username, "Modification config EasyVista")
     request.session["flash"] = "Configuration EasyVista sauvegardée"
     return RedirectResponse("/settings", status_code=302)
+
+
+@router.get("/easyvista/test")
+async def test_easyvista(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user or user.role != "responsable":
+        return RedirectResponse("/dashboard", status_code=302)
+    url = get_config(db, "ev_url", "").rstrip("/")
+    account = get_config(db, "ev_account", "")
+    login = get_config(db, "ev_login", "")
+    token = get_config(db, "ev_token", "")
+    if not all([url, account, login, token]):
+        request.session["flash"] = "EasyVista : renseignez tous les champs avant de tester"
+        return RedirectResponse("/settings?tab=easyvista", status_code=302)
+    try:
+        import requests as req
+        resp = req.get(
+            f"{url}/api/v1/{account}/requests",
+            params={"max_rows": 1},
+            auth=(login, token),
+            headers={"Accept": "application/json"},
+            timeout=8,
+        )
+        if resp.status_code == 200:
+            request.session["flash"] = f"Connexion EasyVista réussie ({url})"
+        else:
+            request.session["flash"] = f"Échec connexion EasyVista : HTTP {resp.status_code}"
+    except Exception as e:
+        request.session["flash"] = f"Échec connexion EasyVista : {e}"
+    return RedirectResponse("/settings?tab=easyvista", status_code=302)

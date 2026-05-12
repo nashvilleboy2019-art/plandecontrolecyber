@@ -149,11 +149,15 @@ async def control_detail(request: Request, control_id: int, db: Session = Depend
     if not c:
         return RedirectResponse("/controls", status_code=302)
     from app.utils import get_config
+    ev_url = get_config(db, "ev_url", "").rstrip("/")
+    ev_account = get_config(db, "ev_account", "")
     return templates.TemplateResponse(request, "controls/detail.html", {
         "request": request, "user": user, "control": c,
         "alert": get_alert_status(c, db),
         "flash": request.session.pop("flash", None),
         "ev_enabled": get_config(db, "ev_enabled", "0") == "1",
+        "ev_url": ev_url,
+        "ev_account": ev_account,
     })
 
 
