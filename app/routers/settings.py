@@ -179,12 +179,15 @@ async def test_easyvista(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/settings?tab=easyvista", status_code=302)
     try:
         import requests as req
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         resp = req.get(
             f"{url}/api/v1/{account}/requests",
             params={"max_rows": 1},
             auth=(login, token),
             headers={"Accept": "application/json"},
             timeout=8,
+            verify=False,
         )
         if resp.status_code == 200:
             request.session["flash"] = f"Connexion EasyVista réussie ({url})"

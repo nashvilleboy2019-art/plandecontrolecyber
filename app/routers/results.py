@@ -1,5 +1,8 @@
 import json
+import urllib3
 from datetime import datetime, date
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -47,6 +50,7 @@ def _ev_create_ticket(db, control: Control, result: ControlResult):
             auth=(login, token),
             headers={"Content-Type": "application/json"},
             timeout=10,
+            verify=False,
         )
         if resp.status_code == 201:
             href = resp.json().get("HREF", "")
@@ -260,6 +264,7 @@ async def ev_incident_detail(
             auth=(login, token),
             headers={"Accept": "application/json"},
             timeout=10,
+            verify=False,
         )
         if resp.status_code == 200:
             data = resp.json()
