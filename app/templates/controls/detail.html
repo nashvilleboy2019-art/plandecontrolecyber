@@ -345,7 +345,7 @@
                   </form>
                 {% endif %}
               </td>
-              <td class="px-4 py-3 text-center" x-data="{ showModal: false, createEv: false }">
+              <td class="px-4 py-3 text-center" x-data="{ showModal: false, createEv: false, loading: false }">
                 {% if r.validated %}
                   <div class="flex flex-col items-center gap-0.5">
                     <span class="text-xs font-medium {% if r.statut == 'incident_en_cours' %}text-orange-600{% else %}text-green-600{% endif %}">
@@ -385,7 +385,8 @@
                           <h3 class="text-white font-bold text-lg">Ouvrir un incident</h3>
                           <p class="text-orange-100 text-sm mt-0.5">{{ control.reference }} – {{ r.periode_label }}</p>
                         </div>
-                        <form method="post" action="/controls/{{ control.id }}/results/{{ r.id }}/open-incident">
+                        <form method="post" action="/controls/{{ control.id }}/results/{{ r.id }}/open-incident"
+                              @submit="if (createEv) loading = true">
                           <div class="px-6 py-5 space-y-4">
 
                             <!-- Option 1 : référence manuelle -->
@@ -436,9 +437,15 @@
                                     class="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
                               Annuler
                             </button>
-                            <button type="submit"
-                                    class="px-5 py-2 text-sm bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors">
-                              Ouvrir l'incident
+                            <button type="submit" :disabled="loading"
+                                    class="px-5 py-2 text-sm bg-orange-600 hover:bg-orange-700 disabled:opacity-60 disabled:cursor-wait text-white font-medium rounded-lg transition-colors flex items-center gap-2">
+                              <svg x-show="loading" class="animate-spin h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              <span x-show="!loading">Ouvrir l'incident</span>
+                              <span x-show="loading && createEv">Création ticket EasyVista…</span>
+                              <span x-show="loading && !createEv">Enregistrement…</span>
                             </button>
                           </div>
                         </form>

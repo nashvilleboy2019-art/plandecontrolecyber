@@ -79,6 +79,8 @@
   </div>
 
   <form method="post" action="/controls/{{ control.id }}/results/new"
+        x-data="{ createEv: false, loading: false }"
+        @submit="if (createEv) loading = true"
         class="bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-100">
 
     <!-- Hidden period fields (updated by Alpine) -->
@@ -123,7 +125,7 @@
       </div>
 
       {% if ev_enabled %}
-      <div x-data="{ createEv: false }" class="space-y-2">
+      <div class="space-y-2">
         <div class="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
           <input type="checkbox" x-model="createEv" name="create_ev" value="1" id="create_ev"
                  class="mt-0.5 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
@@ -155,9 +157,15 @@
          class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
         Annuler
       </a>
-      <button type="submit"
-              class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
-        Enregistrer le résultat
+      <button type="submit" :disabled="loading"
+              class="px-6 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-wait text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+        <svg x-show="loading" class="animate-spin h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span x-show="!loading">Enregistrer le résultat</span>
+        <span x-show="loading && createEv">Création ticket EasyVista…</span>
+        <span x-show="loading && !createEv">Enregistrement…</span>
       </button>
     </div>
   </form>
