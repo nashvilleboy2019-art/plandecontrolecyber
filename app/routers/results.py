@@ -275,17 +275,44 @@ async def ev_incident_detail(
         if resp.status_code == 200:
             data = resp.json()
             rec = data.get("record", data)
-            requestor = rec.get("REQUESTOR", "")
-            if isinstance(requestor, dict):
-                requestor = requestor.get("FULL_NAME", "")
+            # Certains champs sont des objets imbriqués dans l'API EasyVista
+            def _str(obj, *keys):
+                if isinstance(obj, dict):
+                    for k in keys:
+                        v = obj.get(k, "")
+                        if v and not isinstance(v, dict):
+                            return str(v)
+                    return ""
+                return str(obj) if obj else ""
+
+            status_obj = rec.get("STATUS", {})
+            status = _str(status_obj, "STATUS_FR", "STATUS_EN", "STATUS_ID")
+
+            requestor_obj = rec.get("REQUESTOR", {})
+            requestor = _str(requestor_obj, "FULL_NAME", "LAST_NAME", "E_MAIL", "EMPLOYEE_ID")
+
+            desc_obj = rec.get("DESCRIPTION", "")
+            description = _str(desc_obj, "FR", "EN") if isinstance(desc_obj, dict) else (desc_obj or "")
+
+            def _fmt_date(d):
+                if not d:
+                    return ""
+                try:
+                    from datetime import datetime, timezone
+                    dt = datetime.fromisoformat(d.replace("Z", "+00:00"))
+                    return dt.strftime("%d/%m/%Y %H:%M")
+                except Exception:
+                    return d
+
             return JSONResponse({
                 "id": r.jira_ticket,
-                "rfc_number": rec.get("RFC_NUMBER", ""),
-                "status": rec.get("STATUS_FR", rec.get("STATUS", "")),
-                "description": rec.get("DESCRIPTION", ""),
-                "submit_date": rec.get("SUBMIT_DATE", ""),
-                "last_update": rec.get("LAST_UPDATE", ""),
+                "rfc_number": rec.get("RFC_NUMBER", "") or r.jira_ticket,
+                "status": status,
+                "description": description,
+                "submit_date": _fmt_date(rec.get("SUBMIT_DATE_UT", rec.get("SUBMIT_DATE", ""))),
+                "last_update": _fmt_date(rec.get("LAST_UPDATE", "")),
                 "requestor": requestor,
+                "catalog": _str(rec.get("CATALOG_REQUEST", {}), "TITLE_FR", "CATALOG_REQUEST_PATH", "CODE"),
             })
         return JSONResponse({"error": f"EasyVista HTTP {resp.status_code}"}, status_code=502)
     except Exception as e:

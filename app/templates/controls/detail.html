@@ -272,11 +272,15 @@
                         <dl x-show="evInfo && !evLoading" class="space-y-3 text-sm">
                           <div class="flex justify-between gap-4">
                             <dt class="text-gray-500 shrink-0">N° incident</dt>
-                            <dd class="font-bold text-purple-700 text-right" x-text="evInfo?.rfc_number || ('EV-' + evInfo?.id) || '—'"></dd>
+                            <dd class="font-bold text-purple-700 text-right" x-text="evInfo?.rfc_number || evInfo?.id || '—'"></dd>
                           </div>
                           <div class="flex justify-between gap-4">
                             <dt class="text-gray-500 shrink-0">Statut</dt>
                             <dd class="font-medium text-gray-800 text-right" x-text="evInfo?.status || '—'"></dd>
+                          </div>
+                          <div x-show="evInfo?.catalog" class="flex justify-between gap-4">
+                            <dt class="text-gray-500 shrink-0">Sujet</dt>
+                            <dd class="text-gray-700 text-right text-xs" x-text="evInfo?.catalog"></dd>
                           </div>
                           <div class="flex justify-between gap-4">
                             <dt class="text-gray-500 shrink-0">Demandeur</dt>
