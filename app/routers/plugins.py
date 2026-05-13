@@ -13,7 +13,7 @@ import uuid
 from datetime import date, datetime
 
 from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -103,6 +103,11 @@ async def admin_plugins_associate(
     log_activity(db, user.id, user.username, "Plugin associé", "control", control_id,
                  f"{plugin_slug} → {control.reference}")
     request.session["flash"] = f"Plugin « {get_plugin(plugin_slug)['name']} » associé à {control.reference}."
+    return RedirectResponse("/admin/plugins", status_code=302)
+
+
+@router.get("/admin/plugins/baselir-config")
+async def baselir_config_get(request: Request):
     return RedirectResponse("/admin/plugins", status_code=302)
 
 
@@ -433,3 +438,145 @@ async def plugin_run_download(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ── Correction inline des écarts ──────────────────────────────────────────────
+
+@router.post("/plugin/run/{run_id}/ecart/{idx}/override")
+async def ecart_override(
+    request: Request, run_id: int, idx: int, db: Session = Depends(get_db)
+):
+    user = get_current_user(request, db)
+    if not user:
+        return JSONResponse({"error": "Non autorisé"}, status_code=401)
+
+    run = db.query(PluginRun).filter(PluginRun.id == run_id).first()
+    if not run or not os.path.exists(run.result_json_path or ""):
+        return JSONResponse({"error": "Run introuvable"}, status_code=404)
+
+    body   = await request.json()
+    action = body.get("action", "")  # "ignore" | "reset"
+
+    with open(run.result_json_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    ecarts = data.get("ecarts", [])
+    if idx < 0 or idx >= len(ecarts):
+        return JSONResponse({"error": "Index invalide"}, status_code=400)
+
+    if action == "reset":
+        ecarts[idx].pop("_override", None)
+    else:
+        ecarts[idx]["_override"] = action
+
+    def _serial(obj):
+        if isinstance(obj, set):
+            return sorted(obj)
+        raise TypeError(type(obj))
+
+    with open(run.result_json_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, default=_serial)
+
+    return JSONResponse({"ok": True})
+
+
+# ── Envoi de tickets EasyVista pour les écarts sélectionnés ───────────────────
+
+@router.post("/plugin/run/{run_id}/tickets")
+async def create_ev_tickets(
+    request: Request, run_id: int, db: Session = Depends(get_db)
+):
+    import urllib3, requests as _req
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    user = get_current_user(request, db)
+    if not user:
+        return JSONResponse({"error": "Non autorisé"}, status_code=401)
+
+    run = db.query(PluginRun).filter(PluginRun.id == run_id).first()
+    if not run or not os.path.exists(run.result_json_path or ""):
+        return JSONResponse({"error": "Run introuvable"}, status_code=404)
+
+    if get_config(db, "ev_enabled", "0") != "1":
+        return JSONResponse({"error": "EasyVista non activé — activez-le dans Paramètres → EasyVista"}, status_code=503)
+
+    ev_url     = get_config(db, "ev_url", "").rstrip("/")
+    ev_account = get_config(db, "ev_account", "")
+    ev_login   = get_config(db, "ev_login", "")
+    ev_token   = get_config(db, "ev_token", "")
+
+    body         = await request.json()
+    indices      = body.get("indices", [])
+    catalog_code = body.get("catalog_code", "").strip()
+
+    if not all([ev_url, ev_account, ev_token, catalog_code]):
+        return JSONResponse({"error": "Configuration EasyVista incomplète (URL / compte / token / code catalogue)"}, status_code=503)
+
+    with open(run.result_json_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    ecarts  = data.get("ecarts", [])
+    control = run.control_plugin.control
+    y, m    = run.annee, f"{run.mois:02d}"
+    requestor_mail = get_config(db, "ev_requestor_mail", "")
+
+    results = []
+    for idx in indices:
+        if not (0 <= idx < len(ecarts)):
+            continue
+        ecart = ecarts[idx]
+        if ecart.get("_override") == "ignore":
+            continue
+        if ecart.get("_ticket_ev"):
+            results.append({"idx": idx, "ticket": ecart["_ticket_ev"], "status": "existing"})
+            continue
+
+        title = (f"[CONTROLE] {y}.{m}-Revue Droits Opérateurs - {ecart['name']}")
+        description = (
+            f"Contrôle : {control.reference} – {control.libelle}\n"
+            f"Période  : {y}/{m}\n"
+            f"Système  : {ecart['systeme']}\n"
+            f"Nom      : {ecart['name']}\n"
+            f"Détail   : {ecart['detail']}\n"
+            f"Statut   : {ecart['status']}\n"
+        )
+        entry = {
+            "Catalog_Code": catalog_code,
+            "Title":        title,
+            "Description":  description,
+            "External_reference": f"PDC-RUN-{run_id}-{idx}",
+        }
+        if requestor_mail:
+            entry["Requestor_Mail"] = requestor_mail
+
+        try:
+            resp = _req.post(
+                f"{ev_url}/api/v1/{ev_account}/requests",
+                json={"requests": [entry]},
+                headers={"Content-Type": "application/json",
+                         "Authorization": f"Bearer {ev_token}"},
+                timeout=60, verify=False,
+            )
+            if resp.status_code == 201:
+                href       = resp.json().get("HREF", "")
+                ticket_num = href.rstrip("/").split("/")[-1] if href else str(resp.status_code)
+                ecart["_ticket_ev"] = ticket_num
+                results.append({"idx": idx, "ticket": ticket_num, "status": "created"})
+            else:
+                results.append({"idx": idx, "error": f"HTTP {resp.status_code}", "status": "error"})
+        except Exception as e:
+            results.append({"idx": idx, "error": str(e), "status": "error"})
+
+    def _serial(obj):
+        if isinstance(obj, set):
+            return sorted(obj)
+        raise TypeError(type(obj))
+
+    with open(run.result_json_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, default=_serial)
+
+    created = sum(1 for r in results if r["status"] == "created")
+    log_activity(db, user.id, user.username, "Tickets EV créés", "plugin_run", run_id,
+                 f"{created} ticket(s) — {control.reference} {y}/{m}")
+
+    return JSONResponse({"results": results, "created": created})

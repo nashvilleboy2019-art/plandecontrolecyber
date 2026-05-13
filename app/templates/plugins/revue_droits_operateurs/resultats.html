@@ -140,29 +140,148 @@
       </div>
 
       <!-- Écarts -->
-      <div x-show="tab === 'ecarts'" x-cloak>
+      <div x-show="tab === 'ecarts'" x-cloak
+           x-data="{
+             sel: [],
+             cc: '',
+             busy: false,
+             msg: '',
+             msgOk: true,
+             toggle(i) {
+               const j = this.sel.indexOf(i);
+               j >= 0 ? this.sel.splice(j, 1) : this.sel.push(i);
+             },
+             has(i) { return this.sel.includes(i); },
+             async override(i, action) {
+               if (action === 'ignore') this.sel = this.sel.filter(x => x !== i);
+               const r = await fetch('/plugin/run/{{ run.id }}/ecart/' + i + '/override', {
+                 method: 'POST', headers: {'Content-Type': 'application/json'},
+                 body: JSON.stringify({action})
+               });
+               if (r.ok) location.reload();
+             },
+             async sendTickets() {
+               if (!this.sel.length || !this.cc) return;
+               this.busy = true; this.msg = '';
+               const r = await fetch('/plugin/run/{{ run.id }}/tickets', {
+                 method: 'POST', headers: {'Content-Type': 'application/json'},
+                 body: JSON.stringify({indices: this.sel, catalog_code: this.cc})
+               });
+               const d = await r.json();
+               this.busy = false;
+               if (r.ok) {
+                 this.msgOk = true;
+                 this.msg = d.created + ' ticket(s) créé(s)';
+                 setTimeout(() => location.reload(), 1500);
+               } else {
+                 this.msgOk = false;
+                 this.msg = d.error || 'Erreur inconnue';
+               }
+             }
+           }">
         {% if data.ecarts %}
+        <!-- Barre d'actions -->
+        <div class="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100 flex-wrap">
+          <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
+            <input type="checkbox" class="rounded border-gray-300"
+                   @change="sel = $event.target.checked ? [{% for d in data.ecarts %}{% if d.get('_override') != 'ignore' %}{{ loop.index0 }}{% if not loop.last %},{% endif %}{% endif %}{% endfor %}] : []">
+            Tout sélectionner
+          </label>
+          <span class="text-xs text-gray-400" x-show="sel.length > 0">
+            <span x-text="sel.length"></span> sélectionné(s)
+          </span>
+          <div class="flex items-center gap-2 ml-auto flex-wrap">
+            <input type="text" x-model="cc" placeholder="Code catalogue EasyVista…"
+                   class="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 w-48
+                          focus:ring-1 focus:ring-orange-500 focus:border-orange-500">
+            <button @click="sendTickets()"
+                    :disabled="!sel.length || !cc || busy"
+                    class="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600
+                           disabled:opacity-40 text-white text-xs px-3 py-1.5 rounded-lg
+                           font-medium transition-colors whitespace-nowrap">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+              </svg>
+              <span x-text="busy ? 'Envoi…' : 'Créer tickets EV'"></span>
+            </button>
+          </div>
+          <span x-show="msg" x-text="msg"
+                :class="msgOk ? 'text-green-600' : 'text-red-600'"
+                class="text-xs font-medium w-full sm:w-auto"></span>
+        </div>
+
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead><tr class="text-left border-b border-gray-200 bg-gray-50">
-              <th class="px-3 py-2 font-medium text-gray-600">Système</th>
-              <th class="px-3 py-2 font-medium text-gray-600">Nom</th>
-              <th class="px-3 py-2 font-medium text-gray-600">Détail</th>
-              <th class="px-3 py-2 font-medium text-gray-600">Statut</th>
-              <th class="px-3 py-2 font-medium text-gray-600">Rôles LIR</th>
-              <th class="px-3 py-2 font-medium text-gray-600">Objet ticket EV</th>
-            </tr></thead>
+            <thead>
+              <tr class="text-left border-b border-gray-200 bg-gray-50">
+                <th class="px-2 py-2 w-8"></th>
+                <th class="px-3 py-2 font-medium text-gray-600">Système</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Nom</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Détail</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Statut</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Ticket EV</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Action</th>
+              </tr>
+            </thead>
             <tbody class="divide-y divide-gray-100">
               {% for d in data.ecarts %}
-              <tr class="bg-red-50 hover:bg-red-100 transition-colors">
-                <td class="px-3 py-2 font-medium text-red-800">{{ d.systeme }}</td>
-                <td class="px-3 py-2 font-medium">{{ d.name }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ d.detail }}</td>
-                <td class="px-3 py-2">{{ status_badge(d.status) }}</td>
-                <td class="px-3 py-2 text-xs text-gray-500">{{ roles_str(d.roles_lir) }}</td>
-                <td class="px-3 py-2 text-xs text-gray-600 max-w-xs truncate"
-                    title="[CONTROLE] {{ data.control_date[:4] }}.{{ data.control_date[5:7] }}-Revue Droits Opérateurs - {{ d.name }}">
-                  [CONTROLE] {{ data.control_date[:4] }}.{{ data.control_date[5:7] }}-Revue Droits Opérateurs - {{ d.name }}
+              {% set idx = loop.index0 %}
+              {% set ignored = d.get('_override') == 'ignore' %}
+              <tr class="{% if ignored %}opacity-50 bg-gray-50{% else %}bg-red-50 hover:bg-red-100{% endif %} transition-colors">
+                <td class="px-2 py-2.5">
+                  {% if not ignored %}
+                  <input type="checkbox" class="rounded border-gray-300"
+                         :checked="has({{ idx }})"
+                         @change="toggle({{ idx }})">
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2.5 font-medium text-xs
+                           {% if ignored %}text-gray-400 line-through{% else %}text-red-800{% endif %}">
+                  {{ d.systeme }}
+                </td>
+                <td class="px-3 py-2.5 font-medium
+                           {% if ignored %}line-through text-gray-400{% endif %}">
+                  {{ d.name }}
+                </td>
+                <td class="px-3 py-2.5 {% if ignored %}text-gray-400{% else %}text-gray-700{% endif %}">
+                  {{ d.detail }}
+                </td>
+                <td class="px-3 py-2.5">
+                  {% if ignored %}
+                  <span class="inline-block px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500">Ignoré</span>
+                  {% else %}
+                  {{ status_badge(d.status) }}
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2.5">
+                  {% if d.get('_ticket_ev') %}
+                  <span class="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700
+                               border border-blue-200 px-2 py-0.5 rounded-full font-mono">
+                    <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                    #{{ d['_ticket_ev'] }}
+                  </span>
+                  {% else %}
+                  <span class="text-xs text-gray-400">—</span>
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2.5">
+                  {% if ignored %}
+                  <button @click="override({{ idx }}, 'reset')"
+                          class="text-xs px-2 py-1 rounded border border-gray-300
+                                 text-gray-600 hover:bg-white transition-colors">
+                    Rétablir
+                  </button>
+                  {% else %}
+                  <button @click="override({{ idx }}, 'ignore')"
+                          class="text-xs px-2 py-1 rounded border border-amber-200
+                                 text-amber-700 hover:bg-amber-50 transition-colors">
+                    Ignorer
+                  </button>
+                  {% endif %}
                 </td>
               </tr>
               {% endfor %}

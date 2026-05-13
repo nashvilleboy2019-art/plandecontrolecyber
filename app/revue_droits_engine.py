@@ -77,13 +77,13 @@ def load_lir_from_api(api_url: str, api_key: str) -> tuple:
     lir_wordset = defaultdict(list)
 
     headers = {"X-API-Key": api_key}
-    page, per_page = 1, 500
+    page, per_page = 1, 200
 
     while True:
         resp = _req.get(
             f"{api_url.rstrip('/')}/api/v1/habilitations",
             headers=headers,
-            params={"statut_id": 1, "per_page": per_page, "page": page},
+            params={"per_page": per_page, "page": page},
             timeout=15,
         )
         resp.raise_for_status()
