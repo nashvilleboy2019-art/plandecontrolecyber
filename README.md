@@ -5,7 +5,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-local-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/licence-MIT-green)
 
-Application de gestion du plan de contrôle cybersécurité — suivi des contrôles, saisie des résultats, gestion des incidents, tableau de bord de conformité.
+Application de gestion du plan de contrôle cybersécurité — suivi des contrôles, saisie des résultats, gestion des incidents, tableau de bord de conformité, et **plugins d'automatisation** pour les contrôles récurrents.
 
 Déploiement local Windows ou Docker, aucune dépendance cloud.
 
@@ -33,6 +33,7 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 - **Campagne mensuelle** — vue des contrôles à réaliser pour le mois en cours, avec assignation des auditeurs par le responsable
 - **Planification annuelle** — création en masse de toutes les périodes d'un contrôle pour l'année, avec assignation par période
 - **Saisie des résultats** — formulaire de saisie du taux de conformité par période, statut automatique (conforme / non conforme / NA)
+- **Plugins d'automatisation** — associez un plugin à un contrôle pour l'analyser automatiquement ; le panneau plugin apparaît dans le formulaire de résultat pour lancer, consulter et valider en un seul flux
 - **Workflow incident** — ouverture d'un incident depuis un résultat non conforme (avec ou sans ticket EasyVista), suivi de l'état (en cours / résolu / clôturé)
 - **Clôtures en attente** — file de validation des résultats soumis par les auditeurs
 - **Tableau de bord** — trois onglets : *Vue annuelle* (KPIs, graphiques, top 10 contrôles les moins performants), *Vue mensuelle* (heatmap thématique × mois, top 10 du mois courant), *Indicateurs* (cockpit exécutif cyber avec cartes groupées par domaine, tendance et mini-graphiques)
@@ -53,6 +54,7 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 |---|:---:|:---:|
 | Consulter les contrôles et résultats | ✓ | ✓ |
 | Saisir un résultat | ✓ | ✓ |
+| Lancer un plugin d'automatisation | ✓ | ✓ |
 | Modifier un contrôle | ✓ | ✓ |
 | Créer un contrôle | — | ✓ |
 | Planifier l'année / assigner auditeurs | — | ✓ |
@@ -63,6 +65,7 @@ Déploiement local Windows ou Docker, aucune dépendance cloud.
 | Gestion des utilisateurs | — | ✓ |
 | Paramètres (logo, thème, EasyVista) | — | ✓ |
 | Administration (thématiques, catégories, périmètres) | — | ✓ |
+| Gérer les associations plugin ↔ contrôle | — | ✓ |
 | Archiver un contrôle | — | ✓ |
 
 ## Stack technique
@@ -144,12 +147,19 @@ plandecontrole/
 ├── seed_from_excel.example.py    # template d'import Excel (à copier en seed_from_excel.py)
 ├── app/
 │   ├── main.py                   # application FastAPI, montage des routeurs
-│   ├── models.py                 # ORM : Control, ControlResult, User, History…
+│   ├── models.py                 # ORM : Control, ControlResult, ControlPlugin, PluginRun, User…
 │   ├── auth.py                   # bcrypt, création données par défaut
 │   ├── database.py               # engine SQLite, SessionLocal
 │   ├── utils.py                  # helpers : périodes, alertes, pagination
 │   ├── templates_config.py       # Jinja2 + fonctions globales (get_theme…)
 │   ├── theme_cache.py            # cache thème couleurs
+│   ├── revue_droits_engine.py    # moteur d'analyse SACRE / PKI / KSTAMP (lecture LIR via BaseLIR)
+│   ├── plugins/
+│   │   ├── __init__.py                   # PLUGIN_REGISTRY + get_plugin() / all_plugins()
+│   │   ├── revue_droits_operateurs.py    # plugin combiné SACRE + PKI + KSTAMP (DSO-LOG-03)
+│   │   ├── revue_droits_sacre.py         # sous-plugin SACRE seul (DSO-LOG-03-01)
+│   │   ├── revue_droits_pki.py           # sous-plugin PKI seul (DSO-LOG-03-02)
+│   │   └── revue_droits_kstamp.py        # sous-plugin KSTAMP (DSO-LOG-03-03)
 │   └── routers/
 │       ├── controls.py           # CRUD contrôles, archivage, historique
 │       ├── results.py            # saisie résultats, incidents, validations
@@ -158,7 +168,9 @@ plandecontrole/
 │       ├── admin.py              # thématiques, catégories, périmètres
 │       ├── users.py              # gestion comptes
 │       ├── activity.py           # journal d'activité
-│       └── settings.py           # logo, thème, EasyVista
+│       ├── settings.py           # logo, thème, EasyVista
+│       ├── plugins.py            # administration plugins, exécution, résultats, validation
+│       └── revue_droits.py       # page ad-hoc standalone /revue-droits (hors plugin)
 ├── app/templates/
 │   ├── base.html                 # layout, navbar, flash messages
 │   ├── dashboard.html
@@ -166,15 +178,27 @@ plandecontrole/
 │   ├── login.html
 │   ├── controls/
 │   │   ├── list.html             # liste avec filtres
-│   │   ├── detail.html           # fiche contrôle + tableau résultats
+│   │   ├── detail.html           # fiche contrôle + tableau résultats + bouton plugin
 │   │   ├── form.html             # création / modification
 │   │   ├── plan_year.html        # planification annuelle
 │   │   └── history.html
 │   ├── results/
-│   │   ├── form.html             # saisie résultat
+│   │   ├── form.html             # saisie résultat (avec panneau plugin si associé)
 │   │   └── pending.html          # clôtures en attente
+│   ├── admin/
+│   │   ├── index.html
+│   │   └── plugins.html          # gestion associations plugin ↔ contrôle
+│   ├── plugins/
+│   │   └── revue_droits_operateurs/
+│   │       ├── form.html         # formulaire upload SACRE + PKI + KSTAMP
+│   │       └── resultats.html    # résultats tabulés + validation (partagé par tous les sous-plugins)
+│   │   └── revue_droits_sacre/
+│   │       └── form.html         # formulaire upload SACRE seul
+│   │   └── revue_droits_pki/
+│   │       └── form.html         # formulaire upload PKI seul
+│   │   └── revue_droits_kstamp/
+│   │       └── form.html         # formulaire upload KSTAMP (MRS1 / MRS2 / CLY)
 │   ├── campagne/index.html
-│   ├── admin/index.html
 │   ├── users/
 │   ├── activity/list.html
 │   └── settings/index.html
@@ -203,6 +227,66 @@ non_conforme
 Un incident peut être lié à :
 - Un **numéro d'incident** saisi manuellement (éditable après ouverture)
 - Un **ticket EasyVista** créé automatiquement via l'API (si EasyVista configuré dans les paramètres)
+
+## Plugins d'automatisation
+
+Le système de plugins permet d'associer un moteur d'analyse automatique à n'importe quel contrôle.
+
+### Architecture
+
+```
+PLUGIN_REGISTRY (app/plugins/__init__.py)
+    └── chaque plugin expose : execute(form, config, db_path, control_date)
+                               compute_taux(result) → float
+                               build_commentaire(result) → str
+```
+
+Chaque plugin est enregistré avec un `slug`, un `name`, un `short` (référence DSO), et les chemins vers ses templates de formulaire et de résultats.
+
+### Flux d'utilisation
+
+```
+Formulaire de résultat (/controls/{id}/results/new)
+    └─→ Panneau plugin [Lancer la revue auto →]
+            └─→ Formulaire d'upload (form_template)
+                    └─→ Exécution → PluginRun créé (status = "done")
+                            └─→ Page résultats (result_template)
+                                    └─→ [Enregistrer et saisir le résultat →]
+                                            └─→ ControlResult créé/mis à jour
+                                                    └─→ Retour formulaire de résultat
+                                                            (panneau affiche : "Revue validée")
+```
+
+### Plugins disponibles
+
+| Slug | Référence | Systèmes analysés | Fichiers requis |
+|---|---|---|---|
+| `revue_droits_operateurs` | DSO-LOG-03 | SACRE + PKI + KSTAMP | sacre.csv, pki.txt, kstamp_mrs1/mrs2/cly.txt |
+| `revue_droits_sacre` | DSO-LOG-03-01 | SACRE | sacre.csv |
+| `revue_droits_pki` | DSO-LOG-03-02 | PKI | pki.txt |
+| `revue_droits_kstamp` | DSO-LOG-03-03 | KSTAMP | kstamp_mrs1/mrs2/cly.txt (≥ 1) |
+
+### Connexion BaseLIR
+
+Les plugins de revue des droits croisent les exports applicatifs avec la **Liste des Identités et Rôles (LIR)** stockée dans la base SQLite [BaseLIR](../BaseLIR).
+
+Le chemin de la base est configurable dans **Paramètres → BaseLIR** (clé `baselir_path`). Valeur par défaut : `C:\Users\Romain\Project\BaseLIR\data\baselir.db`.
+
+La base doit exposer les tables `habilitations`, `ref_roles` et `ref_domaines`. Toute erreur de connexion est remontée dans l'interface (plus de silence silencieux).
+
+### Ajouter un plugin
+
+1. Créer `app/plugins/mon_plugin.py` avec les trois fonctions `execute`, `compute_taux`, `build_commentaire`
+2. Créer les templates `app/templates/plugins/mon_plugin/form.html` et `resultats.html`
+3. Enregistrer dans `PLUGIN_REGISTRY` dans `app/plugins/__init__.py`
+4. Associer le plugin à un contrôle depuis **Admin → Plugins**
+
+### Administration
+
+Accessible depuis **Admin → Plugins** (responsables uniquement) :
+- Associer un plugin à un contrôle
+- Activer / désactiver une association
+- Consulter l'historique des exécutions
 
 ## Intégration EasyVista
 
