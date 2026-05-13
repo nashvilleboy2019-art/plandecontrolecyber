@@ -9,12 +9,13 @@ FORM_TEMPLATE   = "plugins/revue_droits_sacre/form.html"
 RESULT_TEMPLATE = "plugins/revue_droits_operateurs/resultats.html"
 
 
-async def execute(form, config: dict, db_path: str, control_date: str) -> dict:
+async def execute(form, config: dict, lir_url: str, lir_key: str, control_date: str) -> dict:
     sacre_file = form.get("sacre_file")
     if not sacre_file or not sacre_file.filename:
         raise ValueError("Le fichier SACRE est requis.")
     sacre_text = read_upload_text(sacre_file)
-    return run_analysis(sacre_text=sacre_text, db_path=db_path, control_date=control_date)
+    return run_analysis(sacre_text=sacre_text, lir_url=lir_url, lir_key=lir_key,
+                        control_date=control_date)
 
 
 def compute_taux(result: dict) -> float:

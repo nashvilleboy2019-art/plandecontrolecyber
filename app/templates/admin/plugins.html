@@ -29,10 +29,63 @@
 <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ error }}</div>
 {% endif %}
 
+<!-- ── Configuration BaseLIR ── -->
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8" x-data="{ open: {{ 'true' if not lir_key else 'false' }} }">
+  <button @click="open = !open"
+          class="w-full flex items-center justify-between px-5 py-4 border-b border-gray-100 text-left hover:bg-gray-50 transition-colors">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+        <svg class="h-4 w-4 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm0 5h16"/>
+        </svg>
+      </div>
+      <div>
+        <p class="font-semibold text-gray-900 text-sm">Connexion BaseLIR</p>
+        <p class="text-xs text-gray-500">
+          {% if lir_key %}
+            <span class="text-green-600 font-medium">Configuré</span> — {{ lir_url }}
+          {% else %}
+            <span class="text-red-500 font-medium">Non configuré</span> — requis pour lire la LIR automatiquement
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    <svg class="h-4 w-4 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+    </svg>
+  </button>
+  <div x-show="open" x-cloak>
+    <form method="post" action="/admin/plugins/baselir-config" class="px-5 py-4 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">URL BaseLIR</label>
+          <input type="url" name="baselir_url" value="{{ lir_url }}"
+                 placeholder="http://localhost:8001"
+                 class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+          <p class="text-xs text-gray-400 mt-1">Ex. http://localhost:8001</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Clé API</label>
+          <input type="password" name="baselir_api_key" value="{{ lir_key }}"
+                 placeholder="lir_xxxx..."
+                 class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+          <p class="text-xs text-gray-400 mt-1">Générer dans BaseLIR → Admin → API</p>
+        </div>
+      </div>
+      <div class="flex justify-end">
+        <button type="submit"
+                class="text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+          Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ── Plugins disponibles ── -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
   {% for plugin in plugins %}
-  {% set assoc = associations | selectattr('plugin_slug', 'equalto', plugin.slug) | first %}
+  {% set assoc_list = associations | selectattr('plugin_slug', 'equalto', plugin.slug) | list %}
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
     <!-- Header -->
     <div class="px-5 py-4 border-b border-gray-100 flex items-start gap-3">
@@ -45,12 +98,10 @@
         <div class="flex items-center gap-2 flex-wrap">
           <h2 class="font-semibold text-gray-900">{{ plugin.name }}</h2>
           <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono">{{ plugin.short }}</span>
-          {% if assoc %}
-            {% if assoc.active %}
-              <span class="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Actif</span>
-            {% else %}
-              <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">Inactif</span>
-            {% endif %}
+          {% if assoc_list %}
+            <span class="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
+              {{ assoc_list | length }} association{{ 's' if assoc_list | length != 1 }}
+            </span>
           {% else %}
             <span class="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">Non associé</span>
           {% endif %}
@@ -59,97 +110,89 @@
       </div>
     </div>
 
-    <div class="px-5 py-4 space-y-4">
-      {% if assoc %}
-      <!-- Association existante -->
-      <div class="flex items-center justify-between text-sm">
-        <div>
-          <span class="text-gray-500 text-xs">Contrôle associé</span>
-          <p class="font-medium text-gray-900 font-mono">{{ assoc.control.reference }}</p>
-          <p class="text-xs text-gray-500 truncate max-w-xs">{{ assoc.control.libelle }}</p>
-        </div>
-        <div class="flex gap-2 shrink-0 ml-4">
-          <form method="post" action="/admin/plugins/{{ assoc.id }}/toggle">
-            <button type="submit"
-                    class="text-xs px-2.5 py-1.5 rounded-md border transition-colors
-                           {% if assoc.active %}border-orange-300 text-orange-700 hover:bg-orange-50
-                           {% else %}border-green-300 text-green-700 hover:bg-green-50{% endif %}">
-              {% if assoc.active %}Désactiver{% else %}Activer{% endif %}
-            </button>
-          </form>
-          <form method="post" action="/admin/plugins/{{ assoc.id }}/delete"
-                onsubmit="return confirm('Supprimer cette association ? Les exécutions passées ne seront pas effacées.')">
-            <button type="submit"
-                    class="text-xs px-2.5 py-1.5 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
-              Supprimer
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Statistiques runs -->
-      {% set runs_count = assoc.runs | length %}
-      {% set validated_count = assoc.runs | selectattr('status', 'equalto', 'validated') | list | length %}
-      {% if runs_count > 0 %}
-      <div class="flex gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
-        <span>{{ runs_count }} exécution{{ 's' if runs_count != 1 }}</span>
-        <span class="text-green-600">{{ validated_count }} validée{{ 's' if validated_count != 1 }}</span>
-        {% if assoc.runs[0] %}
-        <span>Dernière : {{ assoc.runs[0].run_at.strftime('%d/%m/%Y') }}</span>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      <!-- Modifier l'association -->
-      <div x-data="{ open: false }">
-        <button @click="open = !open"
-                class="text-xs text-primary-600 hover:text-primary-800 underline underline-offset-2">
-          Changer de contrôle
-        </button>
-        <div x-show="open" x-cloak class="mt-2">
-          <form method="post" action="/admin/plugins/associate" class="flex gap-2">
-            <input type="hidden" name="plugin_slug" value="{{ plugin.slug }}">
-            <select name="control_id" required
-                    class="flex-1 text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-              <option value="">Choisir un contrôle…</option>
-              {% for c in controls %}
-              <option value="{{ c.id }}" {% if c.id == assoc.control_id %}selected{% endif %}>
-                {{ c.reference }} — {{ c.libelle[:50] }}{% if c.libelle|length > 50 %}…{% endif %}
-              </option>
-              {% endfor %}
-            </select>
-            <button type="submit"
-                    class="text-xs bg-primary-600 hover:bg-primary-700 text-white px-3 py-1.5 rounded-lg transition-colors">
-              OK
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {% else %}
-      <!-- Pas encore associé -->
-      <form method="post" action="/admin/plugins/associate" class="flex gap-2 items-end">
-        <input type="hidden" name="plugin_slug" value="{{ plugin.slug }}">
-        <div class="flex-1">
-          <label class="block text-xs text-gray-500 mb-1">Associer à un contrôle</label>
-          <select name="control_id" required
-                  class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-            <option value="">Choisir un contrôle…</option>
-            {% for c in controls %}
-            {% if c.id not in associated_control_ids %}
-            <option value="{{ c.id }}">
-              {{ c.reference }} — {{ c.libelle[:60] }}{% if c.libelle|length > 60 %}…{% endif %}
-            </option>
+    <div class="px-5 py-4 space-y-3">
+      {% if assoc_list %}
+      <!-- Associations existantes -->
+      <div class="space-y-2">
+        {% for assoc in assoc_list %}
+        <div class="flex items-center justify-between text-sm py-2 {% if not loop.last %}border-b border-gray-50{% endif %}">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs text-gray-700">{{ assoc.control.reference }}</span>
+              {% if assoc.active %}
+                <span class="text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded">Actif</span>
+              {% else %}
+                <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Inactif</span>
+              {% endif %}
+            </div>
+            <p class="text-xs text-gray-500 truncate max-w-xs mt-0.5">{{ assoc.control.libelle }}</p>
+            {% set runs_count = assoc.runs | length %}
+            {% if runs_count > 0 %}
+            <p class="text-xs text-gray-400 mt-0.5">
+              {{ runs_count }} exécution{{ 's' if runs_count != 1 }}
+              {% if assoc.runs[0] %}· Dernière : {{ assoc.runs[0].run_at.strftime('%d/%m/%Y') }}{% endif %}
+            </p>
             {% endif %}
-            {% endfor %}
-          </select>
+          </div>
+          <div class="flex gap-1.5 shrink-0 ml-3">
+            <form method="post" action="/admin/plugins/{{ assoc.id }}/toggle">
+              <button type="submit"
+                      class="text-xs px-2 py-1 rounded border transition-colors
+                             {% if assoc.active %}border-orange-200 text-orange-600 hover:bg-orange-50
+                             {% else %}border-green-200 text-green-600 hover:bg-green-50{% endif %}">
+                {% if assoc.active %}Désactiver{% else %}Activer{% endif %}
+              </button>
+            </form>
+            <form method="post" action="/admin/plugins/{{ assoc.id }}/delete"
+                  onsubmit="return confirm('Supprimer cette association ?')">
+              <button type="submit"
+                      class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
+                ×
+              </button>
+            </form>
+          </div>
         </div>
-        <button type="submit"
-                class="text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors font-medium whitespace-nowrap">
-          Associer
-        </button>
-      </form>
+        {% endfor %}
+      </div>
       {% endif %}
+
+      <!-- Ajouter une association -->
+      <div x-data="{ open: {{ 'true' if not assoc_list else 'false' }} }">
+        {% if assoc_list %}
+        <button @click="open = !open"
+                class="text-xs text-primary-600 hover:text-primary-800 flex items-center gap-1">
+          <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Associer à un autre contrôle
+        </button>
+        {% endif %}
+        <div x-show="open" x-cloak class="mt-2">
+          <form method="post" action="/admin/plugins/associate" class="flex gap-2 items-end">
+            <input type="hidden" name="plugin_slug" value="{{ plugin.slug }}">
+            <div class="flex-1">
+              {% if not assoc_list %}
+              <label class="block text-xs text-gray-500 mb-1">Associer à un contrôle</label>
+              {% endif %}
+              <select name="control_id" required
+                      class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <option value="">Choisir un contrôle…</option>
+                {% for c in controls %}
+                <option value="{{ c.id }}"
+                        {% if c.id in associated_control_ids and c.id not in assoc_list | map(attribute='control_id') | list %}disabled{% endif %}>
+                  {{ c.reference }} — {{ c.libelle[:55] }}{% if c.libelle|length > 55 %}…{% endif %}
+                  {% if c.id in associated_control_ids and c.id not in assoc_list | map(attribute='control_id') | list %}(déjà associé){% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <button type="submit"
+                    class="text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors font-medium whitespace-nowrap">
+              Associer
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
   {% endfor %}
@@ -184,7 +227,7 @@
       {% for item in all_runs | sort(attribute='run.run_at', reverse=True) %}
       {% set run = item.run %}
       <tr class="hover:bg-gray-50">
-        <td class="px-4 py-2.5 font-medium text-gray-700">{{ item.plugin_name }}</td>
+        <td class="px-4 py-2.5 font-medium text-gray-700 text-xs">{{ item.plugin_name }}</td>
         <td class="px-4 py-2.5 font-mono text-xs text-gray-600">{{ item.control.reference }}</td>
         <td class="px-4 py-2.5 text-gray-600">{{ run.annee }}/{{ '%02d'|format(run.mois) }}</td>
         <td class="px-4 py-2.5 text-center font-semibold

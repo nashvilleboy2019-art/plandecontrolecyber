@@ -9,12 +9,13 @@ FORM_TEMPLATE   = "plugins/revue_droits_pki/form.html"
 RESULT_TEMPLATE = "plugins/revue_droits_operateurs/resultats.html"
 
 
-async def execute(form, config: dict, db_path: str, control_date: str) -> dict:
+async def execute(form, config: dict, lir_url: str, lir_key: str, control_date: str) -> dict:
     pki_file = form.get("pki_file")
     if not pki_file or not pki_file.filename:
         raise ValueError("Le fichier PKI est requis.")
     pki_text = read_upload_text(pki_file)
-    return run_analysis(pki_text=pki_text, db_path=db_path, control_date=control_date)
+    return run_analysis(pki_text=pki_text, lir_url=lir_url, lir_key=lir_key,
+                        control_date=control_date)
 
 
 def compute_taux(result: dict) -> float:

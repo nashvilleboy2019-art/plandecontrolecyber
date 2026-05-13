@@ -10,7 +10,7 @@ FORM_TEMPLATE   = "plugins/revue_droits_operateurs/form.html"
 RESULT_TEMPLATE = "plugins/revue_droits_operateurs/resultats.html"
 
 
-async def execute(form, config: dict, db_path: str, control_date: str) -> dict:
+async def execute(form, config: dict, lir_url: str, lir_key: str, control_date: str) -> dict:
     """
     form : starlette FormData contenant sacre_file, pki_file, kstamp_mrs1/mrs2/cly
     """
@@ -33,7 +33,7 @@ async def execute(form, config: dict, db_path: str, control_date: str) -> dict:
         raise ValueError("Au moins un fichier KSTAMP est requis.")
 
     return run_analysis(sacre_text=sacre_text, pki_text=pki_text,
-                        kstamp_texts=kstamp_texts, db_path=db_path,
+                        kstamp_texts=kstamp_texts, lir_url=lir_url, lir_key=lir_key,
                         control_date=control_date)
 
 

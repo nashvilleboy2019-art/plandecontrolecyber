@@ -8,7 +8,6 @@ La LIR est lue depuis la base BaseLIR (SQLite) plutôt qu'un fichier Excel.
 import csv
 import io
 import re
-import sqlite3
 import unicodedata
 from collections import defaultdict
 from datetime import date
@@ -65,36 +64,48 @@ def read_upload_text(upload) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
-def load_lir_from_db(db_path: str) -> tuple:
+def load_lir_from_api(api_url: str, api_key: str) -> tuple:
     """
-    Charge les habilitations depuis la base BaseLIR.
-    Retourne (lir_direct, lir_wordset) dans le même format que load_lir().
-    Lève une exception si la base est inaccessible ou le schéma incorrect.
+    Charge les habilitations actives depuis l'API REST BaseLIR.
+    GET {api_url}/api/v1/habilitations  (header X-API-Key: {api_key})
+    Retourne (lir_direct, lir_wordset).
+    Lève une exception si l'API est inaccessible ou renvoie une erreur.
     """
+    import requests as _req
+
     lir_direct  = defaultdict(list)
     lir_wordset = defaultdict(list)
 
-    conn = sqlite3.connect(db_path)
-    try:
-        rows = conn.execute("""
-            SELECT h.nom_prenom, r.label, d.label
-            FROM habilitations h
-            JOIN ref_roles r ON h.role_id = r.id
-            JOIN ref_domaines d ON h.domaine_id = d.id
-            WHERE h.nom_prenom IS NOT NULL
-              AND r.label IS NOT NULL
-              AND d.label IS NOT NULL
-        """).fetchall()
-    finally:
-        conn.close()
+    headers = {"X-API-Key": api_key}
+    page, per_page = 1, 500
 
-    for nom_prenom, role, domaine in rows:
-        k     = norm(str(nom_prenom))
-        entry = (str(role).strip(), str(domaine).strip())
-        lir_direct[k].append(entry)
-        ws_key = frozenset(k.split())
-        if k not in lir_wordset[ws_key]:
-            lir_wordset[ws_key].append(k)
+    while True:
+        resp = _req.get(
+            f"{api_url.rstrip('/')}/api/v1/habilitations",
+            headers=headers,
+            params={"statut_id": 1, "per_page": per_page, "page": page},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        items = data.get("items", data) if isinstance(data, dict) else data
+
+        for hab in items:
+            nom_prenom = hab.get("nom_prenom", "")
+            role       = hab.get("role", "")
+            domaine    = hab.get("domaine", "")
+            if not nom_prenom or not role or not domaine:
+                continue
+            k     = norm(str(nom_prenom))
+            entry = (str(role).strip(), str(domaine).strip())
+            lir_direct[k].append(entry)
+            ws_key = frozenset(k.split())
+            if k not in lir_wordset[ws_key]:
+                lir_wordset[ws_key].append(k)
+
+        if len(items) < per_page:
+            break
+        page += 1
 
     return lir_direct, lir_wordset
 
@@ -468,18 +479,19 @@ def generate_excel_bytes(control_date: str,
 def run_analysis(sacre_text: str = None,
                  pki_text: str = None,
                  kstamp_texts: dict = None,
-                 db_path: str = "",
+                 lir_url: str = "",
+                 lir_key: str = "",
                  control_date: str = None) -> dict:
     """
     Tous les paramètres de contenu sont optionnels — seuls les systèmes fournis sont analysés.
     kstamp_texts : {"MRS1": "<contenu>", "MRS2": "<contenu>", "CLY": "<contenu>"}
-    db_path      : chemin vers baselir.db
+    lir_url / lir_key : URL et clé API BaseLIR
     Retourne un dict JSON-sérialisable + la clé "excel_bytes" (bytes).
     """
     if not control_date:
         control_date = date.today().strftime("%Y-%m-%d")
 
-    lir_direct, lir_wordset = load_lir_from_db(db_path)
+    lir_direct, lir_wordset = load_lir_from_api(lir_url, lir_key)
     lir_count = len(lir_direct)
 
     sacre_res, sacre_disc = [], []

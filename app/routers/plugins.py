@@ -17,7 +17,7 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Control, ControlPlugin, ControlResult, PluginRun, ResultHistory
+from app.models import Control, ControlPlugin, ControlResult, PluginRun, ResultHistory, AppConfig
 from app.utils import get_current_user, get_config, log_activity, periode_label
 from app.templates_config import templates
 from app.plugins import get_plugin, all_plugins
@@ -27,11 +27,10 @@ router = APIRouter(tags=["plugins"])
 PLUGIN_DIR = os.path.join("static", "uploads", "plugin_runs")
 os.makedirs(PLUGIN_DIR, exist_ok=True)
 
-DEFAULT_DB = r"C:\Users\Romain\Project\BaseLIR\data\baselir.db"
-
-
-def _db_path(db: Session) -> str:
-    return get_config(db, "baselir_path", DEFAULT_DB)
+def _lir_cfg(db: Session) -> tuple[str, str]:
+    url = get_config(db, "baselir_url", "http://localhost:8001")
+    key = get_config(db, "baselir_api_key", "")
+    return url, key
 
 
 def _load_module(slug: str):
@@ -56,12 +55,16 @@ async def admin_plugins(request: Request, db: Session = Depends(get_db)):
                 .order_by(Control.reference)
                 .all())
 
+    lir_url, lir_key = _lir_cfg(db)
+
     return templates.TemplateResponse(request, "admin/plugins.html", {
         "user":         user,
         "plugins":      all_plugins(),
         "associations": associations,
         "controls":     controls,
         "associated_control_ids": associated_control_ids,
+        "lir_url":      lir_url,
+        "lir_key":      lir_key,
         "flash":        request.session.pop("flash", None),
         "error":        request.session.pop("plugin_error", None),
     })
@@ -100,6 +103,25 @@ async def admin_plugins_associate(
     log_activity(db, user.id, user.username, "Plugin associé", "control", control_id,
                  f"{plugin_slug} → {control.reference}")
     request.session["flash"] = f"Plugin « {get_plugin(plugin_slug)['name']} » associé à {control.reference}."
+    return RedirectResponse("/admin/plugins", status_code=302)
+
+
+@router.post("/admin/plugins/baselir-config")
+async def save_baselir_config(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user or user.role != "responsable":
+        return RedirectResponse("/login", status_code=302)
+
+    form = await request.form()
+    for key, value in (("baselir_url", form.get("baselir_url", "").strip()),
+                       ("baselir_api_key", form.get("baselir_api_key", "").strip())):
+        cfg = db.query(AppConfig).filter(AppConfig.key == key).first()
+        if cfg:
+            cfg.value = value
+        else:
+            db.add(AppConfig(key=key, value=value))
+    db.commit()
+    request.session["flash"] = "Configuration BaseLIR sauvegardée."
     return RedirectResponse("/admin/plugins", status_code=302)
 
 
@@ -207,8 +229,9 @@ async def plugin_executer(
     meta = get_plugin(cp.plugin_slug)
     mod  = _load_module(cp.plugin_slug)
 
+    lir_url, lir_key = _lir_cfg(db)
     try:
-        result = await mod.execute(form, {}, _db_path(db), control_date)
+        result = await mod.execute(form, {}, lir_url, lir_key, control_date)
     except Exception as e:
         request.session["plugin_run_error"] = f"Erreur d'analyse : {e}"
         return RedirectResponse(

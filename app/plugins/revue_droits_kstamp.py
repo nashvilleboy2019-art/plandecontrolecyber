@@ -9,7 +9,7 @@ FORM_TEMPLATE   = "plugins/revue_droits_kstamp/form.html"
 RESULT_TEMPLATE = "plugins/revue_droits_operateurs/resultats.html"
 
 
-async def execute(form, config: dict, db_path: str, control_date: str) -> dict:
+async def execute(form, config: dict, lir_url: str, lir_key: str, control_date: str) -> dict:
     kstamp_texts = {}
     for site, key in (("MRS1", "kstamp_mrs1"), ("MRS2", "kstamp_mrs2"), ("CLY", "kstamp_cly")):
         f = form.get(key)
@@ -17,7 +17,8 @@ async def execute(form, config: dict, db_path: str, control_date: str) -> dict:
             kstamp_texts[site] = read_upload_text(f)
     if not kstamp_texts:
         raise ValueError("Au moins un fichier KSTAMP est requis (MRS1, MRS2 ou CLY).")
-    return run_analysis(kstamp_texts=kstamp_texts, db_path=db_path, control_date=control_date)
+    return run_analysis(kstamp_texts=kstamp_texts, lir_url=lir_url, lir_key=lir_key,
+                        control_date=control_date)
 
 
 def compute_taux(result: dict) -> float:

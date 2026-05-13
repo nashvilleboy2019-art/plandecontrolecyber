@@ -106,6 +106,7 @@ async def new_result_form(
     cp = c.plugin
     plugin_run = None
     plugin_meta = None
+    plugin_recent_runs = []
     if cp and cp.active:
         plugin_run = (db.query(PluginRun)
                       .filter(PluginRun.control_plugin_id == cp.id,
@@ -113,6 +114,11 @@ async def new_result_form(
                               PluginRun.mois == mois)
                       .order_by(PluginRun.run_at.desc())
                       .first())
+        plugin_recent_runs = (db.query(PluginRun)
+                              .filter(PluginRun.control_plugin_id == cp.id)
+                              .order_by(PluginRun.run_at.desc())
+                              .limit(5)
+                              .all())
         plugin_meta = get_plugin(cp.plugin_slug)
 
     return templates.TemplateResponse(request, "results/form.html", {
@@ -125,6 +131,7 @@ async def new_result_form(
         "cp": cp,
         "plugin_run": plugin_run,
         "plugin_meta": plugin_meta,
+        "plugin_recent_runs": plugin_recent_runs,
         "flash": request.session.pop("flash", None),
     })
 
