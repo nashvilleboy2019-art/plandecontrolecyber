@@ -7,11 +7,12 @@ from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Control, ControlResult, ResultHistory, User
+from app.models import Control, ControlResult, ResultHistory, User, PluginRun
 from app.utils import (
     get_current_user, log_activity, paginate,
     current_period, periode_label, get_config,
 )
+from app.plugins import get_plugin
 from app.templates_config import templates
 from fastapi.responses import JSONResponse
 
@@ -102,6 +103,18 @@ async def new_result_form(
         ControlResult.mois == mois,
     ).first()
 
+    cp = c.plugin
+    plugin_run = None
+    plugin_meta = None
+    if cp and cp.active:
+        plugin_run = (db.query(PluginRun)
+                      .filter(PluginRun.control_plugin_id == cp.id,
+                              PluginRun.annee == annee,
+                              PluginRun.mois == mois)
+                      .order_by(PluginRun.run_at.desc())
+                      .first())
+        plugin_meta = get_plugin(cp.plugin_slug)
+
     return templates.TemplateResponse(request, "results/form.html", {
         "request": request, "user": user, "control": c,
         "result": existing,
@@ -109,6 +122,10 @@ async def new_result_form(
         "periode_label_str": periode_label(c.frequence, annee, mois),
         "error": None,
         "ev_enabled": get_config(db, "ev_enabled", "0") == "1",
+        "cp": cp,
+        "plugin_run": plugin_run,
+        "plugin_meta": plugin_meta,
+        "flash": request.session.pop("flash", None),
     })
 
 

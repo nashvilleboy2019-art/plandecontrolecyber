@@ -105,8 +105,8 @@
 
       {{ tab_btn('resume', 'Résumé') }}
       {{ tab_btn('ecarts', 'Écarts', total_ecarts, true) }}
-      {{ tab_btn('sacre',  'SACRE',  data.sacre|length) }}
-      {{ tab_btn('pki',    'PKI',    data.pki|length) }}
+      {% if data.sacre %}{{ tab_btn('sacre', 'SACRE', data.sacre|length) }}{% endif %}
+      {% if data.pki %}{{ tab_btn('pki', 'PKI', data.pki|length) }}{% endif %}
       {% for ks in data.kstamp_sets %}
       {{ tab_btn('kstamp_' + ks.site, 'KSTAMP-' + ks.site, ks.results|length) }}
       {% endfor %}
@@ -319,9 +319,9 @@
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
           </svg>
-          Enregistrer et retourner au contrôle
+          Enregistrer et saisir le résultat →
         </button>
-        <p class="text-xs text-gray-400">La clôture définitive reste à faire depuis la fiche du contrôle.</p>
+        <p class="text-xs text-gray-400">Vous reviendrez sur le formulaire de résultat pour finaliser et clôturer.</p>
       </div>
     </form>
   </div>

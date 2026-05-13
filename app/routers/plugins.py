@@ -12,7 +12,7 @@ import os
 import uuid
 from datetime import date, datetime
 
-from fastapi import APIRouter, Request, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -189,14 +189,6 @@ async def plugin_lancer(
 async def plugin_executer(
     request: Request, control_id: int,
     db: Session = Depends(get_db),
-    annee:        int = Form(...),
-    mois:         int = Form(...),
-    control_date: str = Form(""),
-    sacre_file:   UploadFile = File(...),
-    pki_file:     UploadFile = File(...),
-    kstamp_mrs1:  UploadFile = File(None),
-    kstamp_mrs2:  UploadFile = File(None),
-    kstamp_cly:   UploadFile = File(None),
 ):
     user = get_current_user(request, db)
     if not user:
@@ -206,34 +198,17 @@ async def plugin_executer(
     if not control or not control.plugin or not control.plugin.active:
         return RedirectResponse(f"/controls/{control_id}", status_code=302)
 
+    form = await request.form()
+    annee        = int(form.get("annee", 0))
+    mois         = int(form.get("mois", 0))
+    control_date = form.get("control_date", "") or date.today().strftime("%Y-%m-%d")
+
     cp   = control.plugin
     meta = get_plugin(cp.plugin_slug)
     mod  = _load_module(cp.plugin_slug)
 
-    if not control_date:
-        control_date = date.today().strftime("%Y-%m-%d")
-
-    # Validation : au moins 1 fichier KSTAMP
-    kstamp_provided = any(
-        f and f.filename for f in (kstamp_mrs1, kstamp_mrs2, kstamp_cly)
-    )
-    if not kstamp_provided:
-        request.session["plugin_run_error"] = "Au moins un fichier KSTAMP est requis."
-        return RedirectResponse(
-            f"/plugin/controls/{control_id}/lancer?annee={annee}&mois={mois}",
-            status_code=302
-        )
-
-    files = {
-        "sacre_file":  sacre_file,
-        "pki_file":    pki_file,
-        "kstamp_mrs1": kstamp_mrs1,
-        "kstamp_mrs2": kstamp_mrs2,
-        "kstamp_cly":  kstamp_cly,
-    }
-
     try:
-        result = await mod.execute(files, {}, _db_path(db), control_date)
+        result = await mod.execute(form, {}, _db_path(db), control_date)
     except Exception as e:
         request.session["plugin_run_error"] = f"Erreur d'analyse : {e}"
         return RedirectResponse(
@@ -399,9 +374,12 @@ async def plugin_run_valider(
                  f"{control.reference} {run.annee}/{run.mois} — taux {taux}%")
 
     request.session["flash"] = (
-        f"Résultat enregistré : {taux}% — Vous pouvez maintenant clôturer la période."
+        f"Résultat enregistré : {taux}% — Vérifiez et clôturez ci-dessous."
     )
-    return RedirectResponse(f"/controls/{control.id}", status_code=302)
+    return RedirectResponse(
+        f"/controls/{control.id}/results/new?annee={run.annee}&mois={run.mois}",
+        status_code=302
+    )
 
 
 # ── Téléchargement Excel ──────────────────────────────────────────────────────

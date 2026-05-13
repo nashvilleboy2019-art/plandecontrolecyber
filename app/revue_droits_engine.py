@@ -54,16 +54,28 @@ def strip_operateur(name: str) -> str:
 
 # ── Chargement LIR depuis BaseLIR SQLite ──────────────────────────────────────
 
+def read_upload_text(upload) -> str:
+    """Lit le contenu d'un UploadFile avec détection d'encodage."""
+    raw = upload.file.read()
+    for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", errors="replace")
+
+
 def load_lir_from_db(db_path: str) -> tuple:
     """
     Charge les habilitations depuis la base BaseLIR.
     Retourne (lir_direct, lir_wordset) dans le même format que load_lir().
+    Lève une exception si la base est inaccessible ou le schéma incorrect.
     """
     lir_direct  = defaultdict(list)
     lir_wordset = defaultdict(list)
 
+    conn = sqlite3.connect(db_path)
     try:
-        conn = sqlite3.connect(db_path)
         rows = conn.execute("""
             SELECT h.nom_prenom, r.label, d.label
             FROM habilitations h
@@ -73,9 +85,8 @@ def load_lir_from_db(db_path: str) -> tuple:
               AND r.label IS NOT NULL
               AND d.label IS NOT NULL
         """).fetchall()
+    finally:
         conn.close()
-    except Exception:
-        return lir_direct, lir_wordset
 
     for nom_prenom, role, domaine in rows:
         k     = norm(str(nom_prenom))
@@ -454,13 +465,14 @@ def generate_excel_bytes(control_date: str,
 
 # ── Point d'entrée principal ──────────────────────────────────────────────────
 
-def run_analysis(sacre_text: str, pki_text: str,
-                 kstamp_texts: dict,
-                 db_path: str,
+def run_analysis(sacre_text: str = None,
+                 pki_text: str = None,
+                 kstamp_texts: dict = None,
+                 db_path: str = "",
                  control_date: str = None) -> dict:
     """
+    Tous les paramètres de contenu sont optionnels — seuls les systèmes fournis sont analysés.
     kstamp_texts : {"MRS1": "<contenu>", "MRS2": "<contenu>", "CLY": "<contenu>"}
-                   seuls les sites fournis sont analysés.
     db_path      : chemin vers baselir.db
     Retourne un dict JSON-sérialisable + la clé "excel_bytes" (bytes).
     """
@@ -470,16 +482,21 @@ def run_analysis(sacre_text: str, pki_text: str,
     lir_direct, lir_wordset = load_lir_from_db(db_path)
     lir_count = len(lir_direct)
 
-    sacre_data          = parse_sacre(sacre_text)
-    sacre_res, sacre_disc = analyze_sacre(sacre_data, lir_direct, lir_wordset)
+    sacre_res, sacre_disc = [], []
+    if sacre_text:
+        sacre_data = parse_sacre(sacre_text)
+        sacre_res, sacre_disc = analyze_sacre(sacre_data, lir_direct, lir_wordset)
 
-    pki_data          = parse_pki(pki_text)
-    pki_res, pki_disc = analyze_pki(pki_data, lir_direct, lir_wordset)
+    pki_res, pki_disc = [], []
+    if pki_text:
+        pki_data = parse_pki(pki_text)
+        pki_res, pki_disc = analyze_pki(pki_data, lir_direct, lir_wordset)
 
     kstamp_sets = []
     for site in ("MRS1", "MRS2", "CLY"):
-        if site in kstamp_texts and kstamp_texts[site]:
-            data = parse_kstamp(kstamp_texts[site])
+        txt = (kstamp_texts or {}).get(site)
+        if txt:
+            data = parse_kstamp(txt)
             res, disc = analyze_kstamp(data, lir_direct, lir_wordset, site)
             kstamp_sets.append((site, res, disc))
 
@@ -495,23 +512,23 @@ def run_analysis(sacre_text: str, pki_text: str,
         ok   = sum(1 for r in ctrl if r["status"] == "CONFORME")
         return {"total": len(ctrl), "conformes": ok, "ecarts": len(ctrl) - ok}
 
+    resume = {}
+    if sacre_text:
+        resume["SACRE"] = _stats(sacre_res)
+    if pki_text:
+        resume["PKI"] = _stats(pki_res)
+    for s, r, _ in kstamp_sets:
+        resume[f"KSTAMP-{s}"] = _stats(r)
+    resume["total_ecarts"] = len(all_disc)
+
     return {
         "control_date":  control_date,
         "lir_count":     lir_count,
-        "resume": {
-            "SACRE": _stats(sacre_res),
-            "PKI":   _stats(pki_res),
-            **{f"KSTAMP-{s}": _stats(r) for s, r, _ in kstamp_sets},
-            "total_ecarts": len(all_disc),
-        },
+        "resume":        resume,
         "sacre":         sacre_res,
         "pki":           pki_res,
         "kstamp_sets":   [
-            {
-                "site": site,
-                "results": res,
-                "discrepancies": disc,
-            }
+            {"site": site, "results": res, "discrepancies": disc}
             for site, res, disc in kstamp_sets
         ],
         "ecarts":        all_disc,
