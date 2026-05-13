@@ -89,6 +89,7 @@ class Control(Base):
     history = relationship("ControlHistory", back_populates="control", order_by="desc(ControlHistory.changed_at)")
     created_by = relationship("User", foreign_keys=[created_by_id])
     updated_by = relationship("User", foreign_keys=[updated_by_id])
+    plugin = relationship("ControlPlugin", back_populates="control", uselist=False)
 
 
 class ControlResult(Base):
@@ -152,6 +153,48 @@ class ResultHistory(Base):
     result = relationship("ControlResult", back_populates="history")
     control = relationship("Control")
     changed_by = relationship("User")
+
+
+class ControlPlugin(Base):
+    """Association d'un plugin d'automatisation à un contrôle (1 plugin max par contrôle)."""
+    __tablename__ = "control_plugins"
+    id = Column(Integer, primary_key=True, index=True)
+    control_id = Column(Integer, ForeignKey("controls.id"), unique=True, nullable=False)
+    plugin_slug = Column(String(100), nullable=False)
+    active = Column(Boolean, default=True)
+    config_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    control = relationship("Control", back_populates="plugin")
+    runs = relationship(
+        "PluginRun", back_populates="control_plugin",
+        order_by="desc(PluginRun.run_at)"
+    )
+
+
+class PluginRun(Base):
+    """Résultat d'une exécution de plugin pour une période donnée."""
+    __tablename__ = "plugin_runs"
+    id = Column(Integer, primary_key=True, index=True)
+    control_plugin_id = Column(Integer, ForeignKey("control_plugins.id"), nullable=False)
+    annee = Column(Integer, nullable=False)
+    mois = Column(Integer, nullable=False)
+    plugin_slug = Column(String(100), nullable=False)
+    control_date = Column(String(10))        # YYYY-MM-DD
+    status = Column(String(20), default="done")  # done | validated
+    result_json_path = Column(String(255), nullable=True)
+    excel_path = Column(String(255), nullable=True)
+    taux_conformite = Column(Float, nullable=True)
+    commentaire_auto = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    run_at = Column(DateTime, default=datetime.utcnow)
+    run_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    validated_at = Column(DateTime, nullable=True)
+    validated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    control_plugin = relationship("ControlPlugin", back_populates="runs")
+    run_by = relationship("User", foreign_keys=[run_by_id])
+    validated_by = relationship("User", foreign_keys=[validated_by_id])
 
 
 class ActivityLog(Base):

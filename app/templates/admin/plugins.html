@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Plugins — Plan de Contrôle Cyber{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <div>
+    <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">
+      <a href="/admin" class="hover:text-gray-700">Administration</a>
+      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+      <span>Plugins</span>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900">Automatisation — Plugins de contrôle</h1>
+    <p class="text-gray-500 text-sm mt-1">Associez des plugins d'automatisation aux contrôles du plan.</p>
+  </div>
+</div>
+
+{% if flash %}
+<div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+  <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+  </svg>
+  {{ flash }}
+</div>
+{% endif %}
+
+{% if error %}
+<div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ error }}</div>
+{% endif %}
+
+<!-- ── Plugins disponibles ── -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  {% for plugin in plugins %}
+  {% set assoc = associations | selectattr('plugin_slug', 'equalto', plugin.slug) | first %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <!-- Header -->
+    <div class="px-5 py-4 border-b border-gray-100 flex items-start gap-3">
+      <div class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center shrink-0">
+        <svg class="h-5 w-5 text-primary-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ plugin.icon }}"/>
+        </svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h2 class="font-semibold text-gray-900">{{ plugin.name }}</h2>
+          <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono">{{ plugin.short }}</span>
+          {% if assoc %}
+            {% if assoc.active %}
+              <span class="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Actif</span>
+            {% else %}
+              <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">Inactif</span>
+            {% endif %}
+          {% else %}
+            <span class="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">Non associé</span>
+          {% endif %}
+        </div>
+        <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">{{ plugin.description }}</p>
+      </div>
+    </div>
+
+    <div class="px-5 py-4 space-y-4">
+      {% if assoc %}
+      <!-- Association existante -->
+      <div class="flex items-center justify-between text-sm">
+        <div>
+          <span class="text-gray-500 text-xs">Contrôle associé</span>
+          <p class="font-medium text-gray-900 font-mono">{{ assoc.control.reference }}</p>
+          <p class="text-xs text-gray-500 truncate max-w-xs">{{ assoc.control.libelle }}</p>
+        </div>
+        <div class="flex gap-2 shrink-0 ml-4">
+          <form method="post" action="/admin/plugins/{{ assoc.id }}/toggle">
+            <button type="submit"
+                    class="text-xs px-2.5 py-1.5 rounded-md border transition-colors
+                           {% if assoc.active %}border-orange-300 text-orange-700 hover:bg-orange-50
+                           {% else %}border-green-300 text-green-700 hover:bg-green-50{% endif %}">
+              {% if assoc.active %}Désactiver{% else %}Activer{% endif %}
+            </button>
+          </form>
+          <form method="post" action="/admin/plugins/{{ assoc.id }}/delete"
+                onsubmit="return confirm('Supprimer cette association ? Les exécutions passées ne seront pas effacées.')">
+            <button type="submit"
+                    class="text-xs px-2.5 py-1.5 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
+              Supprimer
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Statistiques runs -->
+      {% set runs_count = assoc.runs | length %}
+      {% set validated_count = assoc.runs | selectattr('status', 'equalto', 'validated') | list | length %}
+      {% if runs_count > 0 %}
+      <div class="flex gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
+        <span>{{ runs_count }} exécution{{ 's' if runs_count != 1 }}</span>
+        <span class="text-green-600">{{ validated_count }} validée{{ 's' if validated_count != 1 }}</span>
+        {% if assoc.runs[0] %}
+        <span>Dernière : {{ assoc.runs[0].run_at.strftime('%d/%m/%Y') }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Modifier l'association -->
+      <div x-data="{ open: false }">
+        <button @click="open = !open"
+                class="text-xs text-primary-600 hover:text-primary-800 underline underline-offset-2">
+          Changer de contrôle
+        </button>
+        <div x-show="open" x-cloak class="mt-2">
+          <form method="post" action="/admin/plugins/associate" class="flex gap-2">
+            <input type="hidden" name="plugin_slug" value="{{ plugin.slug }}">
+            <select name="control_id" required
+                    class="flex-1 text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+              <option value="">Choisir un contrôle…</option>
+              {% for c in controls %}
+              <option value="{{ c.id }}" {% if c.id == assoc.control_id %}selected{% endif %}>
+                {{ c.reference }} — {{ c.libelle[:50] }}{% if c.libelle|length > 50 %}…{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            <button type="submit"
+                    class="text-xs bg-primary-600 hover:bg-primary-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+              OK
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {% else %}
+      <!-- Pas encore associé -->
+      <form method="post" action="/admin/plugins/associate" class="flex gap-2 items-end">
+        <input type="hidden" name="plugin_slug" value="{{ plugin.slug }}">
+        <div class="flex-1">
+          <label class="block text-xs text-gray-500 mb-1">Associer à un contrôle</label>
+          <select name="control_id" required
+                  class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+            <option value="">Choisir un contrôle…</option>
+            {% for c in controls %}
+            {% if c.id not in associated_control_ids %}
+            <option value="{{ c.id }}">
+              {{ c.reference }} — {{ c.libelle[:60] }}{% if c.libelle|length > 60 %}…{% endif %}
+            </option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit"
+                class="text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors font-medium whitespace-nowrap">
+          Associer
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ── Historique des exécutions ── -->
+{% set all_runs = [] %}
+{% for assoc in associations %}
+  {% for run in assoc.runs[:5] %}
+    {% set _ = all_runs.append({'run': run, 'control': assoc.control, 'plugin_name': (plugins | selectattr('slug', 'equalto', run.plugin_slug) | first or {}).get('name', run.plugin_slug)}) %}
+  {% endfor %}
+{% endfor %}
+
+{% if all_runs %}
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+  <div class="px-5 py-4 border-b border-gray-100">
+    <h2 class="font-semibold text-gray-800">Exécutions récentes</h2>
+  </div>
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="text-left px-4 py-2.5 font-medium text-gray-500">Plugin</th>
+        <th class="text-left px-4 py-2.5 font-medium text-gray-500">Contrôle</th>
+        <th class="text-left px-4 py-2.5 font-medium text-gray-500">Période</th>
+        <th class="text-center px-4 py-2.5 font-medium text-gray-500">Taux</th>
+        <th class="text-center px-4 py-2.5 font-medium text-gray-500">Statut</th>
+        <th class="text-left px-4 py-2.5 font-medium text-gray-500">Exécuté le</th>
+        <th class="px-4 py-2.5"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for item in all_runs | sort(attribute='run.run_at', reverse=True) %}
+      {% set run = item.run %}
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-2.5 font-medium text-gray-700">{{ item.plugin_name }}</td>
+        <td class="px-4 py-2.5 font-mono text-xs text-gray-600">{{ item.control.reference }}</td>
+        <td class="px-4 py-2.5 text-gray-600">{{ run.annee }}/{{ '%02d'|format(run.mois) }}</td>
+        <td class="px-4 py-2.5 text-center font-semibold
+                   {% if run.taux_conformite is not none %}
+                   {% if run.taux_conformite >= 90 %}text-green-600
+                   {% elif run.taux_conformite >= 70 %}text-yellow-600
+                   {% else %}text-red-600{% endif %}{% endif %}">
+          {% if run.taux_conformite is not none %}{{ run.taux_conformite }}%{% else %}—{% endif %}
+        </td>
+        <td class="px-4 py-2.5 text-center">
+          {% if run.status == 'validated' %}
+          <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Validé</span>
+          {% else %}
+          <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">En attente</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-2.5 text-gray-500 text-xs">{{ run.run_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td class="px-4 py-2.5 text-right">
+          <a href="/plugin/run/{{ run.id }}" class="text-xs text-primary-600 hover:text-primary-800">Voir</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

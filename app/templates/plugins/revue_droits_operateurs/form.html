@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Revue Droits Opérateurs — {{ control.reference }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+    <a href="/controls" class="hover:text-gray-700">Contrôles</a>
+    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+    </svg>
+    <a href="/controls/{{ control.id }}" class="hover:text-gray-700 font-mono">{{ control.reference }}</a>
+    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+    </svg>
+    <span>{{ plugin.name }}</span>
+  </div>
+
+  <!-- En-tête -->
+  <div class="mb-6">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="w-9 h-9 rounded-lg bg-primary-100 flex items-center justify-center">
+        <svg class="h-5 w-5 text-primary-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ plugin.icon }}"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ plugin.name }}</h1>
+    </div>
+    <p class="text-gray-500 text-sm ml-12">
+      <span class="font-mono font-medium text-gray-700">{{ control.reference }}</span> ·
+      {{ periode_label }}
+    </p>
+  </div>
+
+  {% if error %}
+  <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ error }}</div>
+  {% endif %}
+
+  {% if last_run %}
+  <div class="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
+    <svg class="h-4 w-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <span>
+      Une exécution existe déjà pour cette période ({{ last_run.run_at.strftime('%d/%m/%Y %H:%M') }},
+      taux : {{ last_run.taux_conformite }}%).
+      Vous pouvez
+      <a href="/plugin/run/{{ last_run.id }}" class="underline hover:text-amber-900">consulter les résultats</a>
+      ou relancer l'analyse ci-dessous.
+    </span>
+  </div>
+  {% endif %}
+
+  <!-- Instructions -->
+  <div class="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6 text-sm text-blue-800">
+    <p class="font-semibold mb-3 flex items-center gap-2">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      Avant de lancer la revue
+    </p>
+    <ol class="list-decimal list-inside space-y-1.5 text-blue-700">
+      <li>Exportez l'extract SACRE depuis l'interface SACRE (CSV « ; »)</li>
+      <li>Exportez le fichier PKI depuis l'outil PKI (sortie psql pipe-séparée)</li>
+      <li>Exportez les fichiers KSTAMP depuis chaque site (MRS1, MRS2, CLY) via le script d'audit</li>
+      <li>La base LIR est lue automatiquement depuis <strong>BaseLIR</strong> — aucun fichier à fournir</li>
+    </ol>
+  </div>
+
+  <!-- Formulaire -->
+  <form method="post" action="/plugin/controls/{{ control.id }}/executer"
+        enctype="multipart/form-data"
+        x-data="{ loading: false }" @submit="loading = true">
+
+    <input type="hidden" name="annee" value="{{ annee }}">
+    <input type="hidden" name="mois"  value="{{ mois }}">
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-100">
+
+      <!-- Date -->
+      <div class="px-6 py-4 flex items-center gap-4">
+        <label class="w-44 text-sm font-medium text-gray-700 shrink-0">Date du contrôle</label>
+        <input type="date" name="control_date" value="{{ today }}"
+               class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm
+                      focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+      </div>
+
+      <!-- SACRE -->
+      <div class="px-6 py-4 flex items-start gap-4">
+        <label class="w-44 text-sm font-medium text-gray-700 shrink-0 pt-1">
+          Fichier SACRE <span class="text-red-500">*</span>
+        </label>
+        <div class="flex-1">
+          <input type="file" name="sacre_file" accept=".csv,.txt" required
+                 class="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0
+                        file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700
+                        hover:file:bg-primary-100 cursor-pointer">
+          <p class="text-xs text-gray-400 mt-1">SACRE_audit_des_droits_operateurs.csv · CSV séparateur « ; »</p>
+        </div>
+      </div>
+
+      <!-- PKI -->
+      <div class="px-6 py-4 flex items-start gap-4">
+        <label class="w-44 text-sm font-medium text-gray-700 shrink-0 pt-1">
+          Fichier PKI <span class="text-red-500">*</span>
+        </label>
+        <div class="flex-1">
+          <input type="file" name="pki_file" accept=".txt" required
+                 class="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0
+                        file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700
+                        hover:file:bg-primary-100 cursor-pointer">
+          <p class="text-xs text-gray-400 mt-1">file_output_PKI.txt · Sortie psql pipe-séparée</p>
+        </div>
+      </div>
+
+      <!-- KSTAMP MRS1 -->
+      <div class="px-6 py-4 flex items-start gap-4">
+        <label class="w-44 text-sm font-medium text-gray-700 shrink-0 pt-1">
+          KSTAMP MRS1
+          <span class="block text-xs font-normal text-gray-400">Au moins 1 requis</span>
+        </label>
+        <div class="flex-1">
+          <input type="file" name="kstamp_mrs1" accept=".txt"
+                 class="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0
+                        file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700
+                        hover:file:bg-primary-100 cursor-pointer">
+          <p class="text-xs text-gray-400 mt-1">file_output_KSTAMP_MRS1.txt</p>
+        </div>
+      </div>
+
+      <!-- KSTAMP MRS2 -->
+      <div class="px-6 py-4 flex items-start gap-4">
+        <label class="w-44 text-sm font-medium text-gray-700 shrink-0 pt-1">
+          KSTAMP MRS2
+          <span class="block text-xs font-normal text-gray-400">Optionnel</span>
+        </label>
+        <div class="flex-1">
+          <input type="file" name="kstamp_mrs2" accept=".txt"
+                 class="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0
+                        file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700
+                        hover:file:bg-primary-100 cursor-pointer">
+          <p class="text-xs text-gray-400 mt-1">file_output_KSTAMP_MRS2.txt</p>
+        </div>
+      </div>
+
+      <!-- KSTAMP CLY -->
+      <div class="px-6 py-4 flex items-start gap-4">
+        <label class="w-44 text-sm font-medium text-gray-700 shrink-0 pt-1">
+          KSTAMP CLY/PRA
+          <span class="block text-xs font-normal text-gray-400">Optionnel</span>
+        </label>
+        <div class="flex-1">
+          <input type="file" name="kstamp_cly" accept=".txt"
+                 class="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0
+                        file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700
+                        hover:file:bg-primary-100 cursor-pointer">
+          <p class="text-xs text-gray-400 mt-1">file_output_KSTAMP_CLY.txt</p>
+        </div>
+      </div>
+
+      <!-- Bouton -->
+      <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex items-center gap-4">
+        <button type="submit" :disabled="loading"
+                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white
+                       font-medium px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-60">
+          <template x-if="!loading">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </template>
+          <template x-if="loading">
+            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+            </svg>
+          </template>
+          <span x-text="loading ? 'Analyse en cours…' : 'Lancer la revue'"></span>
+        </button>
+        <a href="/controls/{{ control.id }}"
+           class="text-sm text-gray-500 hover:text-gray-700 transition-colors">Annuler</a>
+        <p class="ml-auto text-xs text-gray-400">LIR lu automatiquement depuis BaseLIR</p>
+      </div>
+    </div>
+  </form>
+
+  <!-- Règles de conformité -->
+  <div class="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-5 text-sm text-gray-600">
+    <p class="font-medium text-gray-700 mb-3">Règles de conformité</p>
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="text-left text-gray-500 border-b border-gray-200">
+          <th class="pb-2 pr-4">Système</th>
+          <th class="pb-2 pr-4">Groupe / Profil</th>
+          <th class="pb-2 pr-4">Rôles acceptés</th>
+          <th class="pb-2">Domaine</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        <tr><td class="py-1.5 pr-4">SACRE</td><td class="pr-4">Fonctions sensibles</td><td class="pr-4">Ingénieur/Admin sys ou Opérateur</td><td>OSC</td></tr>
+        <tr><td class="py-1.5 pr-4">PKI</td><td class="pr-4">RUN</td><td class="pr-4">Ingénieur/Admin sys ou Opérateur</td><td>OSC</td></tr>
+        <tr><td class="py-1.5 pr-4">PKI</td><td class="pr-4">SIEA, SUPER_ADMIN, VALIDEUR</td><td class="pr-4">Ingénieur/Admin sys uniquement</td><td>OSC</td></tr>
+        <tr><td class="py-1.5 pr-4">KSTAMP</td><td class="pr-4">Profil admin</td><td class="pr-4">Ingénieur/Admin sys uniquement</td><td>OSH</td></tr>
+        <tr><td class="py-1.5 pr-4">KSTAMP</td><td class="pr-4">Profil monitoring</td><td class="pr-4">Ingénieur/Admin sys ou Opérateur</td><td>OSH</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

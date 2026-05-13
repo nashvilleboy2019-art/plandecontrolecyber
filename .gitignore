@@ -29,6 +29,12 @@ env/
 
 # Logs
 *.log
+server_out.txt
+server_err.txt
+
+# Rapports Excel générés (données potentiellement sensibles)
+*.xlsx
+~$*.xlsx
 
 # Distribution / packaging
 dist/

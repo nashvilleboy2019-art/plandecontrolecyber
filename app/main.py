@@ -8,7 +8,7 @@ from app.database import SessionLocal
 from app.models import AppConfig
 from app import theme_cache
 
-from app.routers import controls, results, dashboard, admin, users, activity, settings as settings_router, campagne
+from app.routers import controls, results, dashboard, admin, users, activity, settings as settings_router, campagne, revue_droits, plugins
 
 app = FastAPI(title="Plan de Contrôle Cyber")
 
@@ -26,6 +26,8 @@ app.include_router(users.router)
 app.include_router(activity.router)
 app.include_router(settings_router.router)
 app.include_router(campagne.router)
+app.include_router(revue_droits.router)
+app.include_router(plugins.router)
 
 
 @app.on_event("startup")
