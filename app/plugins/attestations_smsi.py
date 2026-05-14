@@ -30,24 +30,42 @@ def _statut(hab: dict) -> str:
     return STATUS_EXPIREE if exp else STATUS_CONFORME
 
 
+def _get_domaine_id(base_url: str, headers: dict, label: str) -> int | None:
+    """Résout le domaine_id correspondant au label (insensible à la casse)."""
+    import requests as _req
+    resp = _req.get(f"{base_url}/api/v1/referentiels", headers=headers, timeout=10)
+    resp.raise_for_status()
+    for d in resp.json().get("domaines", []):
+        if (d.get("label") or "").strip().upper() == label.upper():
+            return d["id"]
+    return None
+
+
 def _fetch_smsi(lir_url: str, lir_key: str) -> list:
     import requests as _req
-    headers  = {"X-API-Key": lir_key}
+    base    = lir_url.rstrip("/")
+    headers = {"X-API-Key": lir_key}
+
+    domaine_id = _get_domaine_id(base, headers, "SMSI")
+    if domaine_id is None:
+        raise ValueError(
+            "Domaine « SMSI » introuvable dans BaseLIR. "
+            "Ajoutez-le via BaseLIR → Admin → Référentiels → Domaines → Ajouter « SMSI »."
+        )
+
     page, pp = 1, 200
     items    = []
     while True:
         resp = _req.get(
-            f"{lir_url.rstrip('/')}/api/v1/habilitations",
+            f"{base}/api/v1/habilitations",
             headers=headers,
-            params={"statut_id": 1, "per_page": pp, "page": page},
+            params={"domaine_id": domaine_id, "statut_id": 1, "per_page": pp, "page": page},
             timeout=15,
         )
         resp.raise_for_status()
         data  = resp.json()
         batch = data.get("items", data) if isinstance(data, dict) else data
-        for h in batch:
-            if (h.get("domaine") or "").strip().upper() == "SMSI":
-                items.append(h)
+        items.extend(batch)
         if len(batch) < pp:
             break
         page += 1
