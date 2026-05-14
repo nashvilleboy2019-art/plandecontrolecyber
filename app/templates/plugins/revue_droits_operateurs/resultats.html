@@ -147,16 +147,25 @@
              busy: false,
              msg: '',
              msgOk: true,
-             toggle(i) {
-               const j = this.sel.indexOf(i);
-               j >= 0 ? this.sel.splice(j, 1) : this.sel.push(i);
-             },
+             ignoring: null,
+             reason: '',
+             toggle(i) { const j = this.sel.indexOf(i); j >= 0 ? this.sel.splice(j, 1) : this.sel.push(i); },
              has(i) { return this.sel.includes(i); },
-             async override(i, action) {
-               if (action === 'ignore') this.sel = this.sel.filter(x => x !== i);
+             startIgnore(i) { this.sel = this.sel.filter(x => x !== i); this.ignoring = i; this.reason = ''; },
+             cancelIgnore() { this.ignoring = null; this.reason = ''; },
+             async confirmIgnore() {
+               const i = this.ignoring;
                const r = await fetch('/plugin/run/{{ run.id }}/ecart/' + i + '/override', {
                  method: 'POST', headers: {'Content-Type': 'application/json'},
-                 body: JSON.stringify({action})
+                 body: JSON.stringify({action: 'ignore', reason: this.reason})
+               });
+               if (r.ok) location.reload();
+               else this.cancelIgnore();
+             },
+             async resetOverride(i) {
+               const r = await fetch('/plugin/run/{{ run.id }}/ecart/' + i + '/override', {
+                 method: 'POST', headers: {'Content-Type': 'application/json'},
+                 body: JSON.stringify({action: 'reset'})
                });
                if (r.ok) location.reload();
              },
@@ -268,19 +277,51 @@
                   <span class="text-xs text-gray-400">—</span>
                   {% endif %}
                 </td>
-                <td class="px-3 py-2.5">
+                <td class="px-3 py-2.5 min-w-[140px]">
                   {% if ignored %}
-                  <button @click="override({{ idx }}, 'reset')"
-                          class="text-xs px-2 py-1 rounded border border-gray-300
-                                 text-gray-600 hover:bg-white transition-colors">
-                    Rétablir
-                  </button>
+                  <!-- Ligne ignorée : raison + bouton rétablir -->
+                  <div class="space-y-0.5">
+                    {% if d.get('_reason') %}
+                    <p class="text-xs text-amber-700 italic leading-tight max-w-[180px]"
+                       title="{{ d.get('_reason', '') }}">
+                      {{ d.get('_reason', '')[:45] }}{% if d.get('_reason', '') | length > 45 %}…{% endif %}
+                    </p>
+                    {% endif %}
+                    <button @click="resetOverride({{ idx }})"
+                            class="text-xs text-blue-600 hover:text-blue-800 underline underline-offset-1">
+                      Rétablir
+                    </button>
+                  </div>
                   {% else %}
-                  <button @click="override({{ idx }}, 'ignore')"
-                          class="text-xs px-2 py-1 rounded border border-amber-200
-                                 text-amber-700 hover:bg-amber-50 transition-colors">
-                    Ignorer
-                  </button>
+                  <!-- Bouton Ignorer -->
+                  <div x-show="ignoring !== {{ idx }}">
+                    <button @click="startIgnore({{ idx }})"
+                            class="text-xs px-2 py-1 rounded border border-amber-200
+                                   text-amber-700 hover:bg-amber-50 transition-colors">
+                      Ignorer
+                    </button>
+                  </div>
+                  <!-- Formulaire raison inline -->
+                  <div x-show="ignoring === {{ idx }}" x-cloak class="space-y-1.5 w-52">
+                    <input type="text" x-model="reason"
+                           placeholder="Raison : orthographe, doublon…"
+                           class="text-xs border border-amber-300 rounded-md px-2 py-1.5 w-full
+                                  focus:ring-1 focus:ring-amber-400 focus:border-amber-400"
+                           @keydown.enter.prevent="confirmIgnore()"
+                           @keydown.escape.prevent="cancelIgnore()">
+                    <div class="flex gap-1">
+                      <button @click="confirmIgnore()"
+                              class="text-xs px-2.5 py-1 bg-amber-500 hover:bg-amber-600
+                                     text-white rounded font-medium transition-colors">
+                        Confirmer
+                      </button>
+                      <button @click="cancelIgnore()"
+                              class="text-xs px-2 py-1 border border-gray-300
+                                     text-gray-600 hover:bg-gray-50 rounded transition-colors">
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
                   {% endif %}
                 </td>
               </tr>

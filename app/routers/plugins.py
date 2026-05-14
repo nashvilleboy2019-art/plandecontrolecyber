@@ -456,6 +456,7 @@ async def ecart_override(
 
     body   = await request.json()
     action = body.get("action", "")  # "ignore" | "reset"
+    reason = body.get("reason", "").strip()
 
     with open(run.result_json_path, encoding="utf-8") as f:
         data = json.load(f)
@@ -466,8 +467,25 @@ async def ecart_override(
 
     if action == "reset":
         ecarts[idx].pop("_override", None)
+        ecarts[idx].pop("_reason", None)
     else:
         ecarts[idx]["_override"] = action
+        if reason:
+            ecarts[idx]["_reason"] = reason
+        else:
+            ecarts[idx].pop("_reason", None)
+
+    # Recalcul du taux : (total analysé - écarts actifs) / total * 100
+    resume = data.get("resume", {})
+    total = sum(
+        v.get("total", 0) for k, v in resume.items()
+        if k != "total_ecarts" and isinstance(v, dict)
+    )
+    active_ecarts = sum(1 for e in ecarts if e.get("_override") != "ignore")
+    new_taux = round((total - active_ecarts) / total * 100, 1) if total > 0 else 100.0
+
+    run.taux_conformite = new_taux
+    db.commit()
 
     def _serial(obj):
         if isinstance(obj, set):
@@ -477,7 +495,7 @@ async def ecart_override(
     with open(run.result_json_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, default=_serial)
 
-    return JSONResponse({"ok": True})
+    return JSONResponse({"ok": True, "taux": new_taux})
 
 
 # ── Envoi de tickets EasyVista pour les écarts sélectionnés ───────────────────
