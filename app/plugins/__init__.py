@@ -10,6 +10,18 @@ _SHIELD_ICON = (
 )
 
 PLUGIN_REGISTRY: dict[str, dict] = {
+    "attestations_smsi": {
+        "slug":         "attestations_smsi",
+        "name":         "Attestations sur l'honneur – SMSI",
+        "short":        "DSO-ATT-01",
+        "description":  "Vérifie la présence et la validité des attestations pour les rôles de confiance SMSI (source : BaseLIR).",
+        "icon":         _SHIELD_ICON,
+        "family":       "Attestations sur l'honneur",
+        "family_tag":   "ATT",
+        "form_template":   "plugins/attestations_smsi/form.html",
+        "result_template": "plugins/attestations_smsi/resultats.html",
+        "module":          "app.plugins.attestations_smsi",
+    },
     "revue_droits_sacre": {
         "slug":         "revue_droits_sacre",
         "name":         "Revue Droits Opérateurs – SACRE",

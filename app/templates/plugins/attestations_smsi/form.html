@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Attestations SMSI – {{ control.reference }}{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-2 text-sm text-gray-500 mb-6">
+  <a href="/controls/{{ control.id }}" class="hover:text-gray-700 font-mono">{{ control.reference }}</a>
+  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+  </svg>
+  <span>Attestations SMSI — {{ periode_label }}</span>
+</div>
+
+{% if error %}
+<div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ error }}</div>
+{% endif %}
+
+{% if last_run %}
+<div class="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg text-sm">
+  Une analyse existe déjà pour {{ periode_label }} ({{ last_run.run_at.strftime('%d/%m/%Y %H:%M') if last_run.run_at }}).
+  <a href="/plugin/run/{{ last_run.id }}" class="underline font-medium">Voir les résultats →</a>
+</div>
+{% endif %}
+
+<div class="max-w-xl">
+  <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+    <div class="flex items-start gap-3">
+      <svg class="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+      </svg>
+      <div class="text-sm text-blue-800">
+        <p class="font-semibold mb-1">Contrôle {{ control.reference }} — Attestations SMSI</p>
+        <p>La liste des prestataires avec un rôle de confiance SMSI est lue automatiquement depuis BaseLIR.</p>
+        <p class="mt-1 text-xs text-blue-600">
+          Vérifie : présence et validité de la date d'attestation pour chaque habilitation active domaine SMSI.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" action="/plugin/controls/{{ control.id }}/executer"
+        x-data="{ loading: false }" @submit="loading = true"
+        class="bg-white rounded-xl shadow-sm border border-gray-200">
+
+    <input type="hidden" name="annee" value="{{ annee }}">
+    <input type="hidden" name="mois"  value="{{ mois }}">
+    <input type="hidden" name="control_date" value="{{ today }}">
+
+    <div class="p-6 text-sm text-gray-600">
+      <p>Période contrôlée : <strong class="text-gray-900">{{ periode_label }}</strong></p>
+      <p class="mt-1">Date de contrôle : <strong class="text-gray-900">{{ today }}</strong></p>
+      <p class="mt-3 text-xs text-gray-400">
+        Aucun fichier à uploader — les données sont récupérées directement depuis BaseLIR.
+      </p>
+    </div>
+
+    <div class="px-6 pb-6 flex justify-end gap-3">
+      <a href="/controls/{{ control.id }}"
+         class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+        Annuler
+      </a>
+      <button type="submit" :disabled="loading"
+              class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700
+                     disabled:opacity-60 disabled:cursor-wait text-white text-sm font-medium
+                     px-6 py-2 rounded-lg transition-colors">
+        <svg x-show="loading" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+        </svg>
+        <span x-show="!loading">Lancer l'analyse</span>
+        <span x-show="loading" x-cloak>Interrogation BaseLIR…</span>
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

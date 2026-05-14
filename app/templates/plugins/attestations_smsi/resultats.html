@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+{% block title %}Résultats Attestations SMSI — {{ control.reference }}{% endblock %}
+
+{% block content %}
+{% set resume       = data.resume %}
+{% set total_ecarts = resume.total_ecarts %}
+{% set att          = resume.get('ATT', {}) %}
+
+{% macro status_badge(status) %}
+<span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium
+             {% if status == 'CONFORME' %}bg-green-100 text-green-800
+             {% elif status == 'ATTESTATION EXPIRÉE' %}bg-orange-100 text-orange-800
+             {% else %}bg-red-100 text-red-800{% endif %}">{{ status }}</span>
+{% endmacro %}
+
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+  <a href="/controls" class="hover:text-gray-700">Contrôles</a>
+  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+  </svg>
+  <a href="/controls/{{ control.id }}" class="hover:text-gray-700 font-mono">{{ control.reference }}</a>
+  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+  </svg>
+  <span>Résultats — {{ plugin.name }}</span>
+</div>
+
+<div x-data="{ tab: '{{ 'ecarts' if total_ecarts > 0 else 'resume' }}' }">
+
+  <!-- En-tête -->
+  <div class="flex items-start justify-between mb-5">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900">{{ plugin.name }} — {{ periode_label }}</h1>
+      <p class="text-gray-500 text-sm mt-0.5">
+        Contrôle du {{ data.control_date }} · BaseLIR : {{ data.lir_count }} habilitations SMSI ·
+        <span class="{% if total_ecarts > 0 %}text-red-600 font-semibold{% else %}text-green-600 font-semibold{% endif %}">
+          {{ total_ecarts }} écart{{ 's' if total_ecarts != 1 }}
+        </span>
+        · Taux auto : <strong>{{ run.taux_conformite }}%</strong>
+        {% if run.status == 'validated' %}
+        <span class="ml-2 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">Validé</span>
+        {% endif %}
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a href="/plugin/run/{{ run.id }}/telecharger"
+         class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white
+                font-medium px-3 py-1.5 rounded-lg text-sm transition-colors">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Excel
+      </a>
+      <a href="/plugin/controls/{{ control.id }}/lancer?annee={{ run.annee }}&mois={{ run.mois }}"
+         class="inline-flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50
+                text-gray-700 font-medium px-3 py-1.5 rounded-lg text-sm transition-colors">
+        Relancer
+      </a>
+      <a href="/controls/{{ control.id }}"
+         class="inline-flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50
+                text-gray-700 font-medium px-3 py-1.5 rounded-lg text-sm transition-colors">
+        ← Contrôle
+      </a>
+    </div>
+  </div>
+
+  <!-- Cards résumé -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+    <div class="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center shadow-sm">
+      <p class="text-xs font-medium text-gray-500 mb-1">Total contrôlés</p>
+      <p class="text-2xl font-bold text-gray-800">{{ att.total }}</p>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center shadow-sm">
+      <p class="text-xs font-medium text-gray-500 mb-1">Conformes</p>
+      <p class="text-2xl font-bold text-green-600">{{ att.conformes }}</p>
+    </div>
+    {% set n_expirees  = data.results | selectattr('status', 'equalto', 'ATTESTATION EXPIRÉE')  | list | length %}
+    {% set n_manquants = data.results | selectattr('status', 'equalto', 'ATTESTATION MANQUANTE') | list | length %}
+    <div class="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center shadow-sm">
+      <p class="text-xs font-medium text-gray-500 mb-1">Expirées</p>
+      <p class="text-2xl font-bold {% if n_expirees > 0 %}text-orange-600{% else %}text-green-600{% endif %}">{{ n_expirees }}</p>
+    </div>
+    <div class="bg-white rounded-lg border-2 {% if total_ecarts > 0 %}border-red-400{% else %}border-green-400{% endif %} px-4 py-3 text-center shadow-sm">
+      <p class="text-xs font-medium text-gray-500 mb-1">Manquantes</p>
+      <p class="text-2xl font-bold {% if n_manquants > 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ n_manquants }}</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+    <div class="flex gap-0 border-b border-gray-200">
+      {% macro tab_btn(name, label, count=none, red=false) %}
+      <button @click="tab = '{{ name }}'"
+              :class="tab === '{{ name }}' ? 'border-b-2 border-primary-600 text-primary-700 bg-primary-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+              class="flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors">
+        {{ label }}
+        {% if count is not none %}
+        <span class="text-xs px-1.5 py-0.5 rounded-full
+                     {% if red and count > 0 %}bg-red-100 text-red-700{% elif count == 0 %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+          {{ count }}
+        </span>
+        {% endif %}
+      </button>
+      {% endmacro %}
+      {{ tab_btn('resume',  'Résumé') }}
+      {{ tab_btn('ecarts',  'Écarts', total_ecarts, true) }}
+      {{ tab_btn('tous',    'Tous',   data.results | length) }}
+    </div>
+
+    <div class="p-4">
+
+      <!-- Résumé -->
+      <div x-show="tab === 'resume'" x-cloak>
+        <table class="w-full text-sm">
+          <thead><tr class="text-left border-b border-gray-200">
+            <th class="pb-2 pr-4 font-medium text-gray-600">Système</th>
+            <th class="pb-2 pr-4 font-medium text-gray-600 text-right">Contrôlés</th>
+            <th class="pb-2 pr-4 font-medium text-gray-600 text-right">Conformes</th>
+            <th class="pb-2 font-medium text-gray-600 text-right">Écarts</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td class="py-2 pr-4 font-medium">Attestations SMSI</td>
+              <td class="py-2 pr-4 text-right text-gray-600">{{ att.total }}</td>
+              <td class="py-2 pr-4 text-right text-green-700">{{ att.conformes }}</td>
+              <td class="py-2 text-right font-semibold {% if att.ecarts > 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ att.ecarts }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Écarts -->
+      <div x-show="tab === 'ecarts'" x-cloak
+           x-data="{
+             sel: [],
+             cc: '',
+             busy: false,
+             msg: '',
+             msgOk: true,
+             ignoring: null,
+             reason: '',
+             toggle(i) { const j = this.sel.indexOf(i); j >= 0 ? this.sel.splice(j, 1) : this.sel.push(i); },
+             has(i) { return this.sel.includes(i); },
+             startIgnore(i) { this.sel = this.sel.filter(x => x !== i); this.ignoring = i; this.reason = ''; },
+             cancelIgnore() { this.ignoring = null; this.reason = ''; },
+             async confirmIgnore() {
+               const i = this.ignoring;
+               const r = await fetch('/plugin/run/{{ run.id }}/ecart/' + i + '/override', {
+                 method: 'POST', headers: {'Content-Type': 'application/json'},
+                 body: JSON.stringify({action: 'ignore', reason: this.reason})
+               });
+               if (r.ok) location.reload(); else this.cancelIgnore();
+             },
+             async resetOverride(i) {
+               const r = await fetch('/plugin/run/{{ run.id }}/ecart/' + i + '/override', {
+                 method: 'POST', headers: {'Content-Type': 'application/json'},
+                 body: JSON.stringify({action: 'reset'})
+               });
+               if (r.ok) location.reload();
+             },
+             async sendTickets() {
+               if (!this.sel.length || !this.cc) return;
+               this.busy = true; this.msg = '';
+               const r = await fetch('/plugin/run/{{ run.id }}/tickets', {
+                 method: 'POST', headers: {'Content-Type': 'application/json'},
+                 body: JSON.stringify({indices: this.sel, catalog_code: this.cc})
+               });
+               const d = await r.json();
+               this.busy = false;
+               if (r.ok) {
+                 this.msgOk = true; this.msg = d.created + ' ticket(s) créé(s)';
+                 setTimeout(() => location.reload(), 1500);
+               } else { this.msgOk = false; this.msg = d.error || 'Erreur'; }
+             }
+           }">
+        {% if data.ecarts %}
+        <!-- Barre d'actions -->
+        <div class="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100 flex-wrap">
+          <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
+            <input type="checkbox" class="rounded border-gray-300"
+                   @change="sel = $event.target.checked ? [{% for d in data.ecarts %}{% if d.get('_override') != 'ignore' %}{{ loop.index0 }}{% if not loop.last %},{% endif %}{% endif %}{% endfor %}] : []">
+            Tout sélectionner
+          </label>
+          <span class="text-xs text-gray-400" x-show="sel.length > 0">
+            <span x-text="sel.length"></span> sélectionné(s)
+          </span>
+          <div class="flex items-center gap-2 ml-auto flex-wrap">
+            <input type="text" x-model="cc" placeholder="Code catalogue EasyVista…"
+                   class="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 w-48
+                          focus:ring-1 focus:ring-orange-500 focus:border-orange-500">
+            <button @click="sendTickets()" :disabled="!sel.length || !cc || busy"
+                    class="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600
+                           disabled:opacity-40 text-white text-xs px-3 py-1.5 rounded-lg
+                           font-medium transition-colors whitespace-nowrap">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+              </svg>
+              <span x-text="busy ? 'Envoi…' : 'Créer tickets EV'"></span>
+            </button>
+          </div>
+          <span x-show="msg" x-text="msg" :class="msgOk ? 'text-green-600' : 'text-red-600'"
+                class="text-xs font-medium w-full sm:w-auto"></span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left border-b border-gray-200 bg-gray-50">
+                <th class="px-2 py-2 w-8"></th>
+                <th class="px-3 py-2 font-medium text-gray-600">Nom / Prénom</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Rôle</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Date attestation</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Statut</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Ticket EV</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              {% for d in data.ecarts %}
+              {% set idx = loop.index0 %}
+              {% set ignored = d.get('_override') == 'ignore' %}
+              <tr class="{% if ignored %}opacity-50 bg-gray-50{% elif d.status == 'ATTESTATION EXPIRÉE' %}bg-orange-50 hover:bg-orange-100{% else %}bg-red-50 hover:bg-red-100{% endif %} transition-colors">
+                <td class="px-2 py-2.5">
+                  {% if not ignored %}
+                  <input type="checkbox" class="rounded border-gray-300"
+                         :checked="has({{ idx }})" @change="toggle({{ idx }})">
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2.5 font-medium {% if ignored %}line-through text-gray-400{% endif %}">
+                  {{ d.name }}
+                </td>
+                <td class="px-3 py-2.5 text-xs {% if ignored %}text-gray-400{% else %}text-gray-600{% endif %}">
+                  {{ d.detail.split(' — ')[0] if ' — ' in d.detail else '—' }}
+                </td>
+                <td class="px-3 py-2.5 text-xs {% if ignored %}text-gray-400{% else %}text-gray-500{% endif %}">
+                  {% set matching = data.results | selectattr('name', 'equalto', d.name) | list %}
+                  {% if matching and matching[0].date_attestation %}
+                    {{ matching[0].date_attestation }}
+                  {% else %}—{% endif %}
+                </td>
+                <td class="px-3 py-2.5">
+                  {% if ignored %}
+                  <span class="inline-block px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500">Ignoré</span>
+                  {% else %}
+                  {{ status_badge(d.status) }}
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2.5">
+                  {% if d.get('_ticket_ev') %}
+                  <span class="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700
+                               border border-blue-200 px-2 py-0.5 rounded-full font-mono">
+                    #{{ d['_ticket_ev'] }}
+                  </span>
+                  {% else %}
+                  <span class="text-xs text-gray-400">—</span>
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2.5 min-w-[140px]">
+                  {% if ignored %}
+                  <div class="space-y-0.5">
+                    {% if d.get('_reason') %}
+                    <p class="text-xs text-amber-700 italic leading-tight max-w-[180px]"
+                       title="{{ d.get('_reason', '') }}">
+                      {{ d.get('_reason', '')[:45] }}{% if d.get('_reason', '') | length > 45 %}…{% endif %}
+                    </p>
+                    {% endif %}
+                    <button @click="resetOverride({{ idx }})"
+                            class="text-xs text-blue-600 hover:text-blue-800 underline underline-offset-1">
+                      Rétablir
+                    </button>
+                  </div>
+                  {% else %}
+                  <div x-show="ignoring !== {{ idx }}">
+                    <button @click="startIgnore({{ idx }})"
+                            class="text-xs px-2 py-1 rounded border border-amber-200
+                                   text-amber-700 hover:bg-amber-50 transition-colors">
+                      Ignorer
+                    </button>
+                  </div>
+                  <div x-show="ignoring === {{ idx }}" x-cloak class="space-y-1.5 w-52">
+                    <input type="text" x-model="reason"
+                           placeholder="Raison (doublon, erreur de saisie…)"
+                           class="text-xs border border-amber-300 rounded-md px-2 py-1.5 w-full
+                                  focus:ring-1 focus:ring-amber-400 focus:border-amber-400"
+                           @keydown.enter.prevent="confirmIgnore()"
+                           @keydown.escape.prevent="cancelIgnore()">
+                    <div class="flex gap-1">
+                      <button @click="confirmIgnore()"
+                              class="text-xs px-2.5 py-1 bg-amber-500 hover:bg-amber-600
+                                     text-white rounded font-medium transition-colors">
+                        Confirmer
+                      </button>
+                      <button @click="cancelIgnore()"
+                              class="text-xs px-2 py-1 border border-gray-300
+                                     text-gray-600 hover:bg-gray-50 rounded transition-colors">
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-10 text-gray-400">
+          <svg class="h-10 w-10 mb-2 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0"/>
+          </svg>
+          <p class="font-medium text-green-600">Toutes les attestations sont conformes</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Tous -->
+      <div x-show="tab === 'tous'" x-cloak>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left border-b border-gray-200 bg-gray-50">
+                <th class="px-3 py-2 font-medium text-gray-600">Nom / Prénom</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Rôle</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Date attestation</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Statut</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              {% for r in data.results %}
+              <tr class="{% if r.status == 'CONFORME' %}bg-green-50{% elif r.status == 'ATTESTATION EXPIRÉE' %}bg-orange-50{% else %}bg-red-50{% endif %} hover:opacity-80">
+                <td class="px-3 py-2 font-medium">{{ r.name }}</td>
+                <td class="px-3 py-2 text-xs text-gray-600">{{ r.role }}</td>
+                <td class="px-3 py-2 text-xs text-gray-500">{{ r.date_attestation or '—' }}</td>
+                <td class="px-3 py-2">{{ status_badge(r.status) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Validation -->
+  {% if run.status != 'validated' %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 bg-primary-50">
+      <h2 class="font-semibold text-primary-900 flex items-center gap-2">
+        <svg class="h-5 w-5 text-primary-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0"/>
+        </svg>
+        Enregistrer le résultat
+      </h2>
+      <p class="text-xs text-primary-700 mt-0.5">Complétez si nécessaire puis validez pour créer l'entrée dans le plan de contrôle.</p>
+    </div>
+    <form method="post" action="/plugin/run/{{ run.id }}/valider" class="px-5 py-4 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Taux de conformité (%)</label>
+          <input type="number" name="taux_conformite" min="0" max="100" step="0.1"
+                 value="{{ run.taux_conformite }}" required
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                        focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+          <p class="text-xs text-gray-400 mt-0.5">Calculé automatiquement : {{ run.taux_conformite }}% — modifiable</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notes internes (optionnel)</label>
+          <input type="text" name="notes" placeholder="Observations, contexte particulier…"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                        focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Commentaire</label>
+        <textarea name="commentaire" rows="3"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                         focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none">{{ run.commentaire_auto or '' }}</textarea>
+      </div>
+      <div class="flex items-center gap-3 pt-1">
+        <button type="submit"
+                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white
+                       font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          Enregistrer et saisir le résultat →
+        </button>
+      </div>
+    </form>
+  </div>
+  {% else %}
+  <div class="bg-green-50 border border-green-200 rounded-xl px-5 py-4 flex items-center gap-3">
+    <svg class="h-5 w-5 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0"/>
+    </svg>
+    <div class="text-sm">
+      <p class="font-medium text-green-800">Résultat déjà enregistré</p>
+      <p class="text-green-700 text-xs mt-0.5">
+        Validé le {{ run.validated_at.strftime('%d/%m/%Y à %H:%M') if run.validated_at }}
+        {% if run.validated_by %} par {{ run.validated_by.nom_complet or run.validated_by.username }}{% endif %}.
+        Taux : {{ run.taux_conformite }}%
+      </p>
+    </div>
+    <a href="/controls/{{ control.id }}"
+       class="ml-auto text-sm text-green-700 hover:text-green-900 underline underline-offset-2">
+      Retourner au contrôle
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
