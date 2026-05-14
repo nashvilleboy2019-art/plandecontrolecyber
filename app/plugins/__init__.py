@@ -10,16 +10,6 @@ _SHIELD_ICON = (
 )
 
 PLUGIN_REGISTRY: dict[str, dict] = {
-    "revue_droits_operateurs": {
-        "slug":         "revue_droits_operateurs",
-        "name":         "Revue des Droits Opérateurs",
-        "short":        "DSO-LOG-03",
-        "description":  "Contrôle automatisé SACRE + PKI + KSTAMP en une seule passe.",
-        "icon":         _SHIELD_ICON,
-        "form_template":   "plugins/revue_droits_operateurs/form.html",
-        "result_template": "plugins/revue_droits_operateurs/resultats.html",
-        "module":          "app.plugins.revue_droits_operateurs",
-    },
     "revue_droits_sacre": {
         "slug":         "revue_droits_sacre",
         "name":         "Revue Droits Opérateurs – SACRE",
