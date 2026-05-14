@@ -83,10 +83,35 @@
 </div>
 
 <!-- ── Plugins disponibles ── -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-  {% for plugin in plugins %}
-  {% set assoc_list = associations | selectattr('plugin_slug', 'equalto', plugin.slug) | list %}
-  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+{% set families = plugins | map(attribute='family') | unique | list %}
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8"
+     x-data="{ family: '{{ families[0] if families else '' }}' }">
+
+  <!-- Onglets familles -->
+  <div class="flex gap-0 border-b border-gray-200 overflow-x-auto">
+    {% for fam in families %}
+    {% set fam_plugins = plugins | selectattr('family', 'equalto', fam) | list %}
+    {% set fam_assocs  = associations | selectattr('plugin_slug', 'in', fam_plugins | map(attribute='slug') | list) | list %}
+    <button @click="family = '{{ fam }}'"
+            :class="family === '{{ fam }}' ? 'border-b-2 border-primary-600 text-primary-700 bg-primary-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+            class="flex items-center gap-2 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors">
+      {{ fam }}
+      <span class="text-xs px-1.5 py-0.5 rounded-full
+                   {% if fam_assocs %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-500{% endif %}">
+        {{ fam_plugins | length }}
+      </span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- Contenu par famille -->
+  {% for fam in families %}
+  <div x-show="family === '{{ fam }}'" x-cloak class="p-5">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    {% for plugin in plugins | selectattr('family', 'equalto', fam) | list %}
+    {% set assoc_list = associations | selectattr('plugin_slug', 'equalto', plugin.slug) | list %}
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
     <!-- Header -->
     <div class="px-5 py-4 border-b border-gray-100 flex items-start gap-3">
       <div class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center shrink-0">
@@ -195,8 +220,12 @@
       </div>
     </div>
   </div>
-  {% endfor %}
-</div>
+    {% endfor %}
+    </div>{# end grid #}
+  </div>{# end family panel #}
+  {% endfor %}{# end families loop #}
+
+</div>{# end family tabs card #}
 
 <!-- ── Historique des exécutions ── -->
 {% set all_runs = [] %}
