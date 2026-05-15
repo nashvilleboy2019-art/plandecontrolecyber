@@ -29,56 +29,96 @@
 <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ error }}</div>
 {% endif %}
 
-<!-- ── Configuration BaseLIR ── -->
-<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8" x-data="{ open: {{ 'true' if not lir_key else 'false' }} }">
-  <button @click="open = !open"
-          class="w-full flex items-center justify-between px-5 py-4 border-b border-gray-100 text-left hover:bg-gray-50 transition-colors">
-    <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-        <svg class="h-4 w-4 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm0 5h16"/>
-        </svg>
-      </div>
-      <div>
-        <p class="font-semibold text-gray-900 text-sm">Connexion BaseLIR</p>
-        <p class="text-xs text-gray-500">
-          {% if lir_key %}
-            <span class="text-green-600 font-medium">Configuré</span> — {{ lir_url }}
-          {% else %}
-            <span class="text-red-500 font-medium">Non configuré</span> — requis pour lire la LIR automatiquement
-          {% endif %}
-        </p>
-      </div>
-    </div>
-    <svg class="h-4 w-4 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-    </svg>
-  </button>
-  <div x-show="open" x-cloak>
-    <form method="post" action="/admin/plugins/baselir-config" class="px-5 py-4 space-y-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<!-- ── Connexions API (côte à côte) ── -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+
+  <!-- BaseLIR -->
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" x-data="{ open: {{ 'true' if not lir_key else 'false' }} }">
+    <button @click="open = !open"
+            class="w-full flex items-center justify-between px-5 py-4 border-b border-gray-100 text-left hover:bg-gray-50 transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+          <svg class="h-4 w-4 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm0 5h16"/>
+          </svg>
+        </div>
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">URL BaseLIR</label>
-          <input type="url" name="baselir_url" value="{{ lir_url }}"
-                 placeholder="http://localhost:8001"
+          <p class="font-semibold text-gray-900 text-sm">Connexion BaseLIR</p>
+          <p class="text-xs text-gray-500">
+            {% if lir_key %}<span class="text-green-600 font-medium">Configuré</span> — {{ lir_url }}
+            {% else %}<span class="text-red-500 font-medium">Non configuré</span>{% endif %}
+          </p>
+        </div>
+      </div>
+      <svg class="h-4 w-4 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </button>
+    <div x-show="open" x-cloak>
+      <form method="post" action="/admin/plugins/baselir-config" class="px-5 py-4 space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">URL</label>
+          <input type="url" name="baselir_url" value="{{ lir_url }}" placeholder="http://localhost:8001"
                  class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-          <p class="text-xs text-gray-400 mt-1">Ex. http://localhost:8001</p>
         </div>
         <div>
           <label class="block text-xs font-medium text-gray-700 mb-1">Clé API</label>
-          <input type="password" name="baselir_api_key" value="{{ lir_key }}"
-                 placeholder="lir_xxxx..."
+          <input type="password" name="baselir_api_key" value="{{ lir_key }}" placeholder="lir_xxxx…"
                  class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
           <p class="text-xs text-gray-400 mt-1">Générer dans BaseLIR → Admin → API</p>
         </div>
+        <div class="flex justify-end">
+          <button type="submit" class="text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- BaseSECRETS -->
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" x-data="{ open: {{ 'true' if not secrets_key else 'false' }} }">
+    <button @click="open = !open"
+            class="w-full flex items-center justify-between px-5 py-4 border-b border-gray-100 text-left hover:bg-gray-50 transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+          <svg class="h-4 w-4 text-purple-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-900 text-sm">Connexion BaseSECRETS</p>
+          <p class="text-xs text-gray-500">
+            {% if secrets_key %}<span class="text-green-600 font-medium">Configuré</span> — {{ secrets_url }}
+            {% else %}<span class="text-red-500 font-medium">Non configuré</span>{% endif %}
+          </p>
+        </div>
       </div>
-      <div class="flex justify-end">
-        <button type="submit"
-                class="text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-          Enregistrer
-        </button>
-      </div>
-    </form>
+      <svg class="h-4 w-4 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </button>
+    <div x-show="open" x-cloak>
+      <form method="post" action="/admin/plugins/basesecrets-config" class="px-5 py-4 space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">URL BaseSECRETS</label>
+          <input type="url" name="basesecrets_url" value="{{ secrets_url }}"
+                 placeholder="http://localhost:8002"
+                 class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Clé API</label>
+          <input type="password" name="basesecrets_api_key" value="{{ secrets_key }}"
+                 placeholder="Générer dans BaseSECRETS → Paramètres → API"
+                 class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+          <p class="text-xs text-gray-400 mt-1">Générer dans BaseSECRETS → Paramètres → API</p>
+        </div>
+        <div class="flex justify-end">
+          <button type="submit"
+                  class="text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -86,15 +126,16 @@
 {% set families = plugins | map(attribute='family') | unique | list %}
 
 <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8"
-     x-data="{ family: '{{ families[0] if families else '' }}' }">
+     x-data="{ tab: 0 }">
 
   <!-- Onglets familles -->
   <div class="flex gap-0 border-b border-gray-200 overflow-x-auto">
     {% for fam in families %}
+    {% set fi = loop.index0 %}
     {% set fam_plugins = plugins | selectattr('family', 'equalto', fam) | list %}
     {% set fam_assocs  = associations | selectattr('plugin_slug', 'in', fam_plugins | map(attribute='slug') | list) | list %}
-    <button @click="family = '{{ fam }}'"
-            :class="family === '{{ fam }}' ? 'border-b-2 border-primary-600 text-primary-700 bg-primary-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+    <button @click="tab = {{ fi }}"
+            :class="tab === {{ fi }} ? 'border-b-2 border-primary-600 text-primary-700 bg-primary-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
             class="flex items-center gap-2 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors">
       {{ fam }}
       <span class="text-xs px-1.5 py-0.5 rounded-full font-mono
@@ -107,7 +148,8 @@
 
   <!-- Contenu par famille -->
   {% for fam in families %}
-  <div x-show="family === '{{ fam }}'" x-cloak class="p-5">
+  {% set fi = loop.index0 %}
+  <div x-show="tab === {{ fi }}" x-cloak class="p-5">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
     {% for plugin in plugins | selectattr('family', 'equalto', fam) | list %}
     {% set assoc_list = associations | selectattr('plugin_slug', 'equalto', plugin.slug) | list %}
@@ -133,6 +175,17 @@
         </div>
         <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">{{ plugin.description }}</p>
       </div>
+      {% if plugin.slug in configurable_slugs %}
+      <a href="/admin/plugins/{{ plugin.slug }}/configure"
+         title="Configurer la matrice de conformité"
+         class="shrink-0 inline-flex items-center gap-1 text-xs text-indigo-600 border border-indigo-200 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+        </svg>
+        Matrice
+      </a>
+      {% endif %}
     </div>
 
     <div class="px-5 py-4 space-y-3">

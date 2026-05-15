@@ -12,13 +12,13 @@ import os
 import uuid
 from datetime import date, datetime
 
-from fastapi import APIRouter, Request, Depends, Form
+from fastapi import APIRouter, HTTPException, Request, Depends, Form
 from fastapi.responses import RedirectResponse, StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Control, ControlPlugin, ControlResult, PluginRun, ResultHistory, AppConfig
-from app.utils import get_current_user, get_config, log_activity, periode_label
+from app.utils import get_current_user, get_config, set_config, log_activity, periode_label
 from app.templates_config import templates
 from app.plugins import get_plugin, all_plugins
 
@@ -30,6 +30,12 @@ os.makedirs(PLUGIN_DIR, exist_ok=True)
 def _lir_cfg(db: Session) -> tuple[str, str]:
     url = get_config(db, "baselir_url", "http://localhost:8001")
     key = get_config(db, "baselir_api_key", "")
+    return url, key
+
+
+def _secrets_cfg(db: Session) -> tuple[str, str]:
+    url = get_config(db, "basesecrets_url", "http://localhost:8002")
+    key = get_config(db, "basesecrets_api_key", "")
     return url, key
 
 
@@ -55,7 +61,17 @@ async def admin_plugins(request: Request, db: Session = Depends(get_db)):
                 .order_by(Control.reference)
                 .all())
 
-    lir_url, lir_key = _lir_cfg(db)
+    lir_url, lir_key             = _lir_cfg(db)
+    secrets_url, secrets_key     = _secrets_cfg(db)
+
+    configurable_slugs = set()
+    for p in all_plugins():
+        try:
+            mod = importlib.import_module(p["module"])
+            if getattr(mod, "CONFORMITY_RULES", None):
+                configurable_slugs.add(p["slug"])
+        except Exception:
+            pass
 
     return templates.TemplateResponse(request, "admin/plugins.html", {
         "user":         user,
@@ -65,6 +81,9 @@ async def admin_plugins(request: Request, db: Session = Depends(get_db)):
         "associated_control_ids": associated_control_ids,
         "lir_url":      lir_url,
         "lir_key":      lir_key,
+        "secrets_url":  secrets_url,
+        "secrets_key":  secrets_key,
+        "configurable_slugs": configurable_slugs,
         "flash":        request.session.pop("flash", None),
         "error":        request.session.pop("plugin_error", None),
     })
@@ -128,6 +147,147 @@ async def save_baselir_config(request: Request, db: Session = Depends(get_db)):
     db.commit()
     request.session["flash"] = "Configuration BaseLIR sauvegardée."
     return RedirectResponse("/admin/plugins", status_code=302)
+
+
+@router.get("/admin/plugins/basesecrets-config")
+async def basesecrets_config_get(request: Request):
+    return RedirectResponse("/admin/plugins", status_code=302)
+
+
+@router.post("/admin/plugins/basesecrets-config")
+async def save_basesecrets_config(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user or user.role != "responsable":
+        return RedirectResponse("/login", status_code=302)
+
+    form = await request.form()
+    for key, value in (("basesecrets_url", form.get("basesecrets_url", "").strip()),
+                       ("basesecrets_api_key", form.get("basesecrets_api_key", "").strip())):
+        cfg = db.query(AppConfig).filter(AppConfig.key == key).first()
+        if cfg:
+            cfg.value = value
+        else:
+            db.add(AppConfig(key=key, value=value))
+    db.commit()
+    request.session["flash"] = "Configuration BaseSECRETS sauvegardée."
+    return RedirectResponse("/admin/plugins", status_code=302)
+
+
+def _lir_distinct_values(lir_url: str, lir_key: str) -> dict:
+    import requests as _req
+    base    = lir_url.rstrip("/")
+    headers = {"X-API-Key": lir_key}
+    roles, domaines, services = set(), set(), set()
+    pp, page = 200, 1
+    while True:
+        resp = _req.get(f"{base}/api/v1/habilitations", headers=headers,
+                        params={"per_page": pp, "page": page}, timeout=15)
+        resp.raise_for_status()
+        data  = resp.json()
+        batch = data.get("items", data) if isinstance(data, dict) else data
+        for h in batch:
+            if h.get("role"):    roles.add(h["role"])
+            if h.get("domaine"): domaines.add(h["domaine"])
+            if h.get("service"): services.add(h["service"])
+        if len(batch) < pp:
+            break
+        page += 1
+    return {"roles": sorted(roles), "domaines": sorted(domaines), "services": sorted(services)}
+
+
+@router.get("/admin/plugins/{slug}/configure")
+async def plugin_configure_get(slug: str, request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user or user.role != "responsable":
+        return RedirectResponse("/login", status_code=302)
+    meta = get_plugin(slug)
+    if not meta:
+        return RedirectResponse("/admin/plugins", status_code=302)
+
+    mod           = importlib.import_module(meta["module"])
+    default_rules = getattr(mod, "CONFORMITY_RULES", {})
+    stored_raw    = get_config(db, f"plugin_{slug}_rules", "")
+    stored_rules  = json.loads(stored_raw) if stored_raw else {}
+    # Once the user has saved the matrix, stored_rules is the authority (allows deletions/additions).
+    effective     = stored_rules if stored_rules else {**default_rules}
+
+    lir_values = {"roles": [], "domaines": [], "services": []}
+    lir_url, lir_key = _lir_cfg(db)
+    if lir_key:
+        try:
+            lir_values = _lir_distinct_values(lir_url, lir_key)
+        except Exception:
+            pass
+
+    return templates.TemplateResponse(request, "admin/plugin_configure.html", {
+        "user":       user,
+        "plugin":     meta,
+        "rules":      effective,
+        "lir_values": lir_values,
+        "flash":      request.session.pop("flash", None),
+    })
+
+
+@router.post("/admin/plugins/{slug}/configure")
+async def plugin_configure_post(slug: str, request: Request, db: Session = Depends(get_db)):
+    import re as _re
+    user = get_current_user(request, db)
+    if not user or user.role != "responsable":
+        raise HTTPException(status_code=403)
+    meta = get_plugin(slug)
+    if not meta:
+        return RedirectResponse("/admin/plugins", status_code=302)
+
+    mod           = importlib.import_module(meta["module"])
+    default_rules = getattr(mod, "CONFORMITY_RULES", {})
+    stored_raw    = get_config(db, f"plugin_{slug}_rules", "")
+    stored_rules  = json.loads(stored_raw) if stored_raw else {}
+    effective     = {**default_rules, **stored_rules}
+
+    form = await request.form()
+
+    deleted_raw = form.get("deleted_profiles", "")
+    deleted_set = {p.strip() for p in deleted_raw.split(",") if p.strip()}
+
+    rules = {}
+    # Process all existing profiles (defaults + previously stored custom)
+    for profile, defaults in effective.items():
+        if profile in deleted_set:
+            continue
+        role_raw    = form.get(f"{profile}__role", "")
+        domaine_raw = form.get(f"{profile}__domaine", "")
+        service_raw = form.get(f"{profile}__service", "")
+        roles    = [r.strip() for r in role_raw.split(",")    if r.strip()]
+        domaines = [d.strip() for d in domaine_raw.split(",") if d.strip()]
+        services = [s.strip() for s in service_raw.split(",") if s.strip()]
+        rules[profile] = {
+            "roles":    roles    or defaults.get("roles", []),
+            "domaines": domaines or defaults.get("domaines", []),
+            "services": services or defaults.get("services", []),
+        }
+
+    # Process new profiles added via the UI
+    sentinel_re = _re.compile(r"^new_(\d+)__sentinel$")
+    new_ids = sorted(int(m.group(1)) for k in form.keys() if (m := sentinel_re.match(k)))
+    for nid in new_ids:
+        name_raw  = form.get(f"new_{nid}__name", "").strip().lower()
+        name_slug = _re.sub(r"[^a-z0-9_]", "_", name_raw).strip("_")
+        if not name_slug or name_slug in rules:
+            continue
+        role_raw    = form.get(f"new_{nid}__role", "")
+        domaine_raw = form.get(f"new_{nid}__domaine", "")
+        service_raw = form.get(f"new_{nid}__service", "")
+        rules[name_slug] = {
+            "roles":    [r.strip() for r in role_raw.split(",")    if r.strip()],
+            "domaines": [d.strip() for d in domaine_raw.split(",") if d.strip()],
+            "services": [s.strip() for s in service_raw.split(",") if s.strip()],
+        }
+
+    set_config(db, f"plugin_{slug}_rules", json.dumps(rules))
+    log_activity(db, user.id, user.username, "Plugin configuré", "plugin", 0,
+                 f"Matrice mise à jour : {meta['name']}")
+    request.session["flash"] = "Matrice de conformité enregistrée."
+    return RedirectResponse(f"/admin/plugins/{slug}/configure", status_code=302)
 
 
 @router.post("/admin/plugins/{cp_id}/toggle")
@@ -234,9 +394,13 @@ async def plugin_executer(
     meta = get_plugin(cp.plugin_slug)
     mod  = _load_module(cp.plugin_slug)
 
-    lir_url, lir_key = _lir_cfg(db)
+    lir_url, lir_key         = _lir_cfg(db)
+    secrets_url, secrets_key = _secrets_cfg(db)
+    plugin_rules_raw = get_config(db, f"plugin_{cp.plugin_slug}_rules", "")
+    plugin_rules = json.loads(plugin_rules_raw) if plugin_rules_raw else {}
+    config = {"secrets_url": secrets_url, "secrets_key": secrets_key, "plugin_rules": plugin_rules}
     try:
-        result = await mod.execute(form, {}, lir_url, lir_key, control_date)
+        result = await mod.execute(form, config, lir_url, lir_key, control_date)
     except Exception as e:
         request.session["plugin_run_error"] = f"Erreur d'analyse : {e}"
         return RedirectResponse(
@@ -481,7 +645,9 @@ async def ecart_override(
         v.get("total", 0) for k, v in resume.items()
         if k != "total_ecarts" and isinstance(v, dict)
     )
-    active_ecarts = sum(1 for e in ecarts if e.get("_override") != "ignore")
+    active_ecarts = sum(
+        e.get("_hab_count", 1) for e in ecarts if e.get("_override") != "ignore"
+    )
     new_taux = round((total - active_ecarts) / total * 100, 1) if total > 0 else 100.0
 
     run.taux_conformite = new_taux

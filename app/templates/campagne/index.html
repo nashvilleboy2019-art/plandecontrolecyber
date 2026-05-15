@@ -89,6 +89,15 @@
             <a href="/controls/{{ c.id }}" class="font-mono font-semibold text-primary-600 hover:text-primary-700">
               {{ c.reference }}
             </a>
+            {% if c.plugin %}
+            <span title="Contrôle automatisé — plugin {{ c.plugin.plugin_slug }}"
+                  class="ml-1.5 inline-flex items-center gap-0.5 text-xs bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded font-medium">
+              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              Auto
+            </span>
+            {% endif %}
           </td>
           <td class="px-4 py-3 text-gray-700 max-w-xs">
             <span title="{{ c.libelle }}">{{ c.libelle[:55] }}{% if c.libelle|length > 55 %}…{% endif %}</span>

@@ -155,11 +155,16 @@ plandecontrole/
 │   ├── theme_cache.py            # cache thème couleurs
 │   ├── revue_droits_engine.py    # moteur d'analyse SACRE / PKI / KSTAMP (lecture LIR via BaseLIR)
 │   ├── plugins/
-│   │   ├── __init__.py                   # PLUGIN_REGISTRY + get_plugin() / all_plugins()
-│   │   ├── revue_droits_operateurs.py    # plugin combiné SACRE + PKI + KSTAMP (DSO-LOG-03)
-│   │   ├── revue_droits_sacre.py         # sous-plugin SACRE seul (DSO-LOG-03-01)
-│   │   ├── revue_droits_pki.py           # sous-plugin PKI seul (DSO-LOG-03-02)
-│   │   └── revue_droits_kstamp.py        # sous-plugin KSTAMP (DSO-LOG-03-03)
+│   │   ├── __init__.py                        # PLUGIN_REGISTRY + get_plugin() / all_plugins()
+│   │   ├── attestations_smsi.py               # DSO-ATT-01 — attestations SMSI via BaseLIR
+│   │   ├── sensibilisations_smsi.py           # DSO-ATT-02 — sensibilisations sécurité via BaseLIR
+│   │   ├── acces_basesecrets.py               # DSO-LOG-24 — logs connexion BaseSECRETS
+│   │   ├── revue_droits_bastion_eidas.py      # DSO-LOG-19 — BASTION eIDAS × BaseLIR
+│   │   ├── revue_droits_bastion_sin.py        # DSO-LOG-20 — BASTION SI Notaire × BaseLIR
+│   │   ├── revue_droits_operateurs.py         # plugin combiné SACRE + PKI + KSTAMP (DSO-LOG-03)
+│   │   ├── revue_droits_sacre.py              # DSO-LOG-03-02 — SACRE seul
+│   │   ├── revue_droits_pki.py                # DSO-LOG-03-03 — PKI seul
+│   │   └── revue_droits_kstamp.py             # DSO-LOG-03-01 — KSTAMP (MRS1/MRS2/CLY)
 │   └── routers/
 │       ├── controls.py           # CRUD contrôles, archivage, historique
 │       ├── results.py            # saisie résultats, incidents, validations
@@ -187,17 +192,18 @@ plandecontrole/
 │   │   └── pending.html          # clôtures en attente
 │   ├── admin/
 │   │   ├── index.html
-│   │   └── plugins.html          # gestion associations plugin ↔ contrôle
+│   │   ├── plugins.html              # gestion associations plugin ↔ contrôle + config API
+│   │   └── plugin_configure.html     # matrice de conformité configurable (ajout/suppression de profils)
 │   ├── plugins/
-│   │   └── revue_droits_operateurs/
-│   │       ├── form.html         # formulaire upload SACRE + PKI + KSTAMP
-│   │       └── resultats.html    # résultats tabulés + validation (partagé par tous les sous-plugins)
-│   │   └── revue_droits_sacre/
-│   │       └── form.html         # formulaire upload SACRE seul
-│   │   └── revue_droits_pki/
-│   │       └── form.html         # formulaire upload PKI seul
-│   │   └── revue_droits_kstamp/
-│   │       └── form.html         # formulaire upload KSTAMP (MRS1 / MRS2 / CLY)
+│   │   ├── attestations_smsi/        # form + resultats DSO-ATT-01
+│   │   ├── sensibilisations_smsi/    # form + resultats DSO-ATT-02
+│   │   ├── acces_basesecrets/        # form + resultats DSO-LOG-24
+│   │   ├── revue_droits_bastion_eidas/  # form + resultats DSO-LOG-19
+│   │   ├── revue_droits_bastion_sin/    # form + resultats DSO-LOG-20
+│   │   ├── revue_droits_operateurs/  # resultats partagés SACRE/PKI/KSTAMP
+│   │   ├── revue_droits_sacre/       # form DSO-LOG-03-02
+│   │   ├── revue_droits_pki/         # form DSO-LOG-03-03
+│   │   └── revue_droits_kstamp/      # form DSO-LOG-03-01
 │   ├── campagne/index.html
 │   ├── users/
 │   ├── activity/list.html
@@ -259,33 +265,52 @@ Formulaire de résultat (/controls/{id}/results/new)
 
 ### Plugins disponibles
 
-| Slug | Référence | Systèmes analysés | Fichiers requis |
+| Slug | Référence | Description | Source |
 |---|---|---|---|
-| `revue_droits_operateurs` | DSO-LOG-03 | SACRE + PKI + KSTAMP | sacre.csv, pki.txt, kstamp_mrs1/mrs2/cly.txt |
-| `revue_droits_sacre` | DSO-LOG-03-01 | SACRE | sacre.csv |
-| `revue_droits_pki` | DSO-LOG-03-02 | PKI | pki.txt |
-| `revue_droits_kstamp` | DSO-LOG-03-03 | KSTAMP | kstamp_mrs1/mrs2/cly.txt (≥ 1) |
+| `attestations_smsi` | DSO-ATT-01 | Attestations sur l'honneur – SMSI | BaseLIR (API) |
+| `sensibilisations_smsi` | DSO-ATT-02 | Sensibilisations sécurité annuelles – SMSI | BaseLIR (API) |
+| `acces_basesecrets` | DSO-LOG-24 | Logs de connexion BaseSECRETS vs liste autorisée | BaseSECRETS (API) |
+| `revue_droits_bastion_eidas` | DSO-LOG-19 | Revue droits BASTION eIDAS vs matrice LIR | Export CSV + BaseLIR |
+| `revue_droits_bastion_sin` | DSO-LOG-20 | Revue droits BASTION SI Notaire vs matrice LIR | Export CSV + BaseLIR |
+| `revue_droits_sacre` | DSO-LOG-03-02 | Revue droits SACRE vs LIR | Export CSV + BaseLIR |
+| `revue_droits_pki` | DSO-LOG-03-03 | Revue droits PKI vs LIR | Export CSV + BaseLIR |
+| `revue_droits_kstamp` | DSO-LOG-03-01 | Revue droits KSTAMP (MRS1/MRS2/CLY) vs LIR | Export CSV + BaseLIR |
+
+Les contrôles associés à un plugin affichent un badge **⚡ Auto** dans la liste des contrôles et dans la campagne mensuelle.
 
 ### Connexion BaseLIR
 
-Les plugins de revue des droits croisent les exports applicatifs avec la **Liste des Identités et Rôles (LIR)** stockée dans la base SQLite [BaseLIR](../BaseLIR).
+Les plugins croisant avec la LIR utilisent l'**API REST BaseLIR**. Configurer URL et clé API depuis **Admin → Plugins → Connexion BaseLIR**.
 
-Le chemin de la base est configurable dans **Paramètres → BaseLIR** (clé `baselir_path`). Valeur par défaut : `C:\Users\Romain\Project\BaseLIR\data\baselir.db`.
+Les plugins de type BASTION et SMSI interrogent `GET /api/v1/habilitations` (pagination automatique). La clé API se génère dans BaseLIR → API.
 
-La base doit exposer les tables `habilitations`, `ref_roles` et `ref_domaines`. Toute erreur de connexion est remontée dans l'interface (plus de silence silencieux).
+### Matrice de conformité configurable
+
+Les plugins `revue_droits_bastion_eidas` et `revue_droits_bastion_sin` intègrent une matrice de conformité (profil applicatif → rôle / domaine / service LIR attendus). Cette matrice est modifiable depuis **Admin → Plugins → bouton Matrice** :
+- Modifier les critères de chaque profil (autocomplétion depuis BaseLIR)
+- Ajouter un profil applicatif
+- Supprimer un profil
+- Les valeurs disponibles dans BaseLIR sont consultables dans un panneau dépliable
+
+### Connexion BaseSECRETS
+
+Le plugin `acces_basesecrets` utilise l'**API REST BaseSECRETS**. Configurer URL et clé depuis **Admin → Plugins → Connexion BaseSECRETS**.
 
 ### Ajouter un plugin
 
-1. Créer `app/plugins/mon_plugin.py` avec les trois fonctions `execute`, `compute_taux`, `build_commentaire`
+1. Créer `app/plugins/mon_plugin.py` avec les trois fonctions `execute(form, config, lir_url, lir_key, control_date)`, `compute_taux(result)`, `build_commentaire(result)`
 2. Créer les templates `app/templates/plugins/mon_plugin/form.html` et `resultats.html`
 3. Enregistrer dans `PLUGIN_REGISTRY` dans `app/plugins/__init__.py`
 4. Associer le plugin à un contrôle depuis **Admin → Plugins**
 
+Pour les plugins avec matrice de conformité, exposer `CONFORMITY_RULES: dict` au niveau module — le bouton **Matrice** apparaît automatiquement dans l'admin.
+
 ### Administration
 
 Accessible depuis **Admin → Plugins** (responsables uniquement) :
-- Associer un plugin à un contrôle
-- Activer / désactiver une association
+- Configurer les connexions API (BaseLIR, BaseSECRETS)
+- Associer un plugin à un contrôle (activer / désactiver)
+- Configurer la matrice de conformité des plugins BASTION
 - Consulter l'historique des exécutions
 
 ## Intégration EasyVista

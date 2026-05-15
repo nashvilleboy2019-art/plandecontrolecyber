@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Résultats Attestations SMSI — {{ control.reference }}{% endblock %}
+{% block title %}Résultats BASTION SIN — {{ control.reference }}{% endblock %}
 
 {% block content %}
-{% set resume       = data.resume %}
-{% set total_ecarts = resume.total_ecarts %}
-{% set att          = resume.get('ATT', {}) %}
-
 {% macro status_badge(status) %}
 <span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium
              {% if status == 'CONFORME' %}bg-green-100 text-green-800
-             {% elif status == 'ATTESTATION EXPIRÉE' %}bg-orange-100 text-orange-800
+             {% elif status.startswith('N/A') %}bg-gray-100 text-gray-600
+             {% elif status == 'NON TROUVÉ LIR' %}bg-orange-100 text-orange-800
              {% else %}bg-red-100 text-red-800{% endif %}">{{ status }}</span>
 {% endmacro %}
 
-<!-- Breadcrumb -->
+{% set resume       = data.resume %}
+{% set total_ecarts = resume.total_ecarts %}
+{% set bastion      = resume.get('BASTION SIN', {}) %}
+
 <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
   <a href="/controls" class="hover:text-gray-700">Contrôles</a>
   <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -28,12 +28,12 @@
 
 <div x-data="{ tab: '{{ 'ecarts' if total_ecarts > 0 else 'resume' }}' }">
 
-  <!-- En-tête -->
   <div class="flex items-start justify-between mb-5">
     <div>
       <h1 class="text-xl font-bold text-gray-900">{{ plugin.name }} — {{ periode_label }}</h1>
       <p class="text-gray-500 text-sm mt-0.5">
-        Contrôle du {{ data.control_date }} · BaseLIR : {{ data.lir_count }} habilitations SMSI ·
+        Contrôle du {{ data.control_date }} · {{ data.total_accounts }} compte(s) importé(s) ·
+        {{ bastion.total }} nominatif(s) · LIR : {{ data.lir_count }} habilitations ·
         <span class="{% if total_ecarts > 0 %}text-red-600 font-semibold{% else %}text-green-600 font-semibold{% endif %}">
           {{ total_ecarts }} écart{{ 's' if total_ecarts != 1 }}
         </span>
@@ -66,31 +66,29 @@
     </div>
   </div>
 
-  <!-- Cards résumé -->
+  <!-- Cards -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
     <div class="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center shadow-sm">
-      <p class="text-xs font-medium text-gray-500 mb-1">Total contrôlés</p>
-      <p class="text-2xl font-bold text-gray-800">{{ att.total }}</p>
+      <p class="text-xs font-medium text-gray-500 mb-1">Total importé</p>
+      <p class="text-2xl font-bold text-gray-800">{{ data.total_accounts }}</p>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center shadow-sm">
+      <p class="text-xs font-medium text-gray-500 mb-1">Nominatifs</p>
+      <p class="text-2xl font-bold text-gray-700">{{ bastion.total }}</p>
     </div>
     <div class="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center shadow-sm">
       <p class="text-xs font-medium text-gray-500 mb-1">Conformes</p>
-      <p class="text-2xl font-bold text-green-600">{{ att.conformes }}</p>
-    </div>
-    {% set n_expirees  = data.results | selectattr('status', 'equalto', 'ATTESTATION EXPIRÉE')  | list | length %}
-    {% set n_manquants = data.results | selectattr('status', 'equalto', 'ATTESTATION MANQUANTE') | list | length %}
-    <div class="bg-white rounded-lg border border-gray-200 px-4 py-3 text-center shadow-sm">
-      <p class="text-xs font-medium text-gray-500 mb-1">Expirées</p>
-      <p class="text-2xl font-bold {% if n_expirees > 0 %}text-orange-600{% else %}text-green-600{% endif %}">{{ n_expirees }}</p>
+      <p class="text-2xl font-bold text-green-600">{{ bastion.conformes }}</p>
     </div>
     <div class="bg-white rounded-lg border-2 {% if total_ecarts > 0 %}border-red-400{% else %}border-green-400{% endif %} px-4 py-3 text-center shadow-sm">
-      <p class="text-xs font-medium text-gray-500 mb-1">Manquantes</p>
-      <p class="text-2xl font-bold {% if n_manquants > 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ n_manquants }}</p>
+      <p class="text-xs font-medium text-gray-500 mb-1">Écarts</p>
+      <p class="text-2xl font-bold {% if total_ecarts > 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ total_ecarts }}</p>
     </div>
   </div>
 
   <!-- Tabs -->
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-    <div class="flex gap-0 border-b border-gray-200">
+    <div class="flex gap-0 border-b border-gray-200 overflow-x-auto">
       {% macro tab_btn(name, label, count=none, red=false) %}
       <button @click="tab = '{{ name }}'"
               :class="tab === '{{ name }}' ? 'border-b-2 border-primary-600 text-primary-700 bg-primary-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
@@ -106,7 +104,7 @@
       {% endmacro %}
       {{ tab_btn('resume',  'Résumé') }}
       {{ tab_btn('ecarts',  'Écarts', total_ecarts, true) }}
-      {{ tab_btn('tous',    'Tous',   data.results | length) }}
+      {{ tab_btn('tous',    'Tous les comptes', data.results | length) }}
     </div>
 
     <div class="p-4">
@@ -116,16 +114,16 @@
         <table class="w-full text-sm">
           <thead><tr class="text-left border-b border-gray-200">
             <th class="pb-2 pr-4 font-medium text-gray-600">Système</th>
-            <th class="pb-2 pr-4 font-medium text-gray-600 text-right">Contrôlés</th>
+            <th class="pb-2 pr-4 font-medium text-gray-600 text-right">Nominatifs</th>
             <th class="pb-2 pr-4 font-medium text-gray-600 text-right">Conformes</th>
             <th class="pb-2 font-medium text-gray-600 text-right">Écarts</th>
           </tr></thead>
           <tbody>
             <tr>
-              <td class="py-2 pr-4 font-medium">Attestations SMSI</td>
-              <td class="py-2 pr-4 text-right text-gray-600">{{ att.total }}</td>
-              <td class="py-2 pr-4 text-right text-green-700">{{ att.conformes }}</td>
-              <td class="py-2 text-right font-semibold {% if att.ecarts > 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ att.ecarts }}</td>
+              <td class="py-2 pr-4 font-medium">BASTION SIN</td>
+              <td class="py-2 pr-4 text-right text-gray-600">{{ bastion.total }}</td>
+              <td class="py-2 pr-4 text-right text-green-700">{{ bastion.conformes }}</td>
+              <td class="py-2 text-right font-semibold {% if bastion.ecarts > 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ bastion.ecarts }}</td>
             </tr>
           </tbody>
         </table>
@@ -169,31 +167,24 @@
                });
                const d = await r.json();
                this.busy = false;
-               if (r.ok) {
-                 this.msgOk = true; this.msg = d.created + ' ticket(s) créé(s)';
-                 setTimeout(() => location.reload(), 1500);
-               } else { this.msgOk = false; this.msg = d.error || 'Erreur'; }
+               if (r.ok) { this.msgOk = true; this.msg = d.created + ' ticket(s) créé(s)'; setTimeout(() => location.reload(), 1500); }
+               else { this.msgOk = false; this.msg = d.error || 'Erreur'; }
              }
            }">
         {% if data.ecarts %}
-        <!-- Barre d'actions -->
         <div class="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100 flex-wrap">
           <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
             <input type="checkbox" class="rounded border-gray-300"
                    @change="sel = $event.target.checked ? [{% for d in data.ecarts %}{% if d.get('_override') != 'ignore' %}{{ loop.index0 }}{% if not loop.last %},{% endif %}{% endif %}{% endfor %}] : []">
             Tout sélectionner
           </label>
-          <span class="text-xs text-gray-400" x-show="sel.length > 0">
-            <span x-text="sel.length"></span> sélectionné(s)
-          </span>
+          <span class="text-xs text-gray-400" x-show="sel.length > 0"><span x-text="sel.length"></span> sélectionné(s)</span>
           <div class="flex items-center gap-2 ml-auto flex-wrap">
             <input type="text" x-model="cc" placeholder="Code catalogue EasyVista…"
-                   class="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 w-48
-                          focus:ring-1 focus:ring-orange-500 focus:border-orange-500">
+                   class="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 w-48 focus:ring-1 focus:ring-orange-500 focus:border-orange-500">
             <button @click="sendTickets()" :disabled="!sel.length || !cc || busy"
-                    class="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600
-                           disabled:opacity-40 text-white text-xs px-3 py-1.5 rounded-lg
-                           font-medium transition-colors whitespace-nowrap">
+                    class="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-40
+                           text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap">
               <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
@@ -201,8 +192,7 @@
               <span x-text="busy ? 'Envoi…' : 'Créer tickets EV'"></span>
             </button>
           </div>
-          <span x-show="msg" x-text="msg" :class="msgOk ? 'text-green-600' : 'text-red-600'"
-                class="text-xs font-medium w-full sm:w-auto"></span>
+          <span x-show="msg" x-text="msg" :class="msgOk ? 'text-green-600' : 'text-red-600'" class="text-xs font-medium w-full sm:w-auto"></span>
         </div>
 
         <div class="overflow-x-auto">
@@ -210,12 +200,10 @@
             <thead>
               <tr class="text-left border-b border-gray-200 bg-gray-50">
                 <th class="px-2 py-2 w-8"></th>
-                <th class="px-3 py-2 font-medium text-gray-600">Nom / Prénom</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Société</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Service</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Domaine</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Rôle</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Date attestation</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Login</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Nom complet</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Profil</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Détail</th>
                 <th class="px-3 py-2 font-medium text-gray-600">Statut</th>
                 <th class="px-3 py-2 font-medium text-gray-600">Ticket EV</th>
                 <th class="px-3 py-2 font-medium text-gray-600">Action</th>
@@ -225,88 +213,49 @@
               {% for d in data.ecarts %}
               {% set idx = loop.index0 %}
               {% set ignored = d.get('_override') == 'ignore' %}
-              <tr class="{% if ignored %}opacity-50 bg-gray-50{% elif d.status == 'ATTESTATION EXPIRÉE' %}bg-orange-50 hover:bg-orange-100{% else %}bg-red-50 hover:bg-red-100{% endif %} transition-colors">
+              <tr class="{% if ignored %}opacity-50 bg-gray-50{% else %}bg-red-50 hover:bg-red-100{% endif %} transition-colors">
                 <td class="px-2 py-2.5">
                   {% if not ignored %}
-                  <input type="checkbox" class="rounded border-gray-300"
-                         :checked="has({{ idx }})" @change="toggle({{ idx }})">
+                  <input type="checkbox" class="rounded border-gray-300" :checked="has({{ idx }})" @change="toggle({{ idx }})">
                   {% endif %}
                 </td>
-                <td class="px-3 py-2.5 font-medium {% if ignored %}line-through text-gray-400{% endif %}">
-                  {{ d.name }}
-                </td>
-                <td class="px-3 py-2.5 text-xs {% if ignored %}text-gray-400{% else %}text-gray-600{% endif %}">
-                  {{ d.get('societe', '—') }}
-                </td>
-                <td class="px-3 py-2.5 text-xs {% if ignored %}text-gray-400{% else %}text-gray-600{% endif %}">
-                  {{ d.get('service', '—') }}
-                </td>
-                <td class="px-3 py-2.5 text-xs {% if ignored %}text-gray-400{% else %}text-gray-600{% endif %}">
-                  {{ d.get('domaine', '—') }}
-                </td>
-                <td class="px-3 py-2.5 text-xs {% if ignored %}text-gray-400{% else %}text-gray-600{% endif %}">
-                  {{ d.get('role', '—') }}
-                </td>
-                <td class="px-3 py-2.5 text-xs {% if ignored %}text-gray-400{% else %}text-gray-500{% endif %}">
-                  {{ d.get('date_attestation') or '—' }}
-                </td>
+                <td class="px-3 py-2.5 font-mono text-xs {% if ignored %}text-gray-400{% else %}text-gray-700{% endif %}">{{ d.username }}</td>
+                <td class="px-3 py-2.5 font-medium {% if ignored %}line-through text-gray-400{% endif %}">{{ d.name }}</td>
+                <td class="px-3 py-2.5 text-xs font-mono {% if ignored %}text-gray-400{% else %}text-gray-600{% endif %}">{{ d.profile }}</td>
+                <td class="px-3 py-2.5 text-xs {% if ignored %}text-gray-400{% else %}text-gray-700{% endif %} max-w-xs">{{ d.detail }}</td>
                 <td class="px-3 py-2.5">
-                  {% if ignored %}
-                  <span class="inline-block px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500">Ignoré</span>
-                  {% else %}
-                  {{ status_badge(d.status) }}
-                  {% endif %}
+                  {% if ignored %}<span class="inline-block px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500">Ignoré</span>
+                  {% else %}{{ status_badge(d.status) }}{% endif %}
                 </td>
                 <td class="px-3 py-2.5">
                   {% if d.get('_ticket_ev') %}
-                  <span class="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700
-                               border border-blue-200 px-2 py-0.5 rounded-full font-mono">
-                    #{{ d['_ticket_ev'] }}
-                  </span>
-                  {% else %}
-                  <span class="text-xs text-gray-400">—</span>
-                  {% endif %}
+                  <span class="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-mono">#{{ d['_ticket_ev'] }}</span>
+                  {% else %}<span class="text-xs text-gray-400">—</span>{% endif %}
                 </td>
                 <td class="px-3 py-2.5 min-w-[140px]">
                   {% if ignored %}
                   <div class="space-y-0.5">
                     {% if d.get('_reason') %}
-                    <p class="text-xs text-amber-700 italic leading-tight max-w-[180px]"
-                       title="{{ d.get('_reason', '') }}">
-                      {{ d.get('_reason', '')[:45] }}{% if d.get('_reason', '') | length > 45 %}…{% endif %}
+                    <p class="text-xs text-amber-700 italic leading-tight max-w-[180px]" title="{{ d.get('_reason','') }}">
+                      {{ d.get('_reason','')[:45] }}{% if d.get('_reason','') | length > 45 %}…{% endif %}
                     </p>
                     {% endif %}
-                    <button @click="resetOverride({{ idx }})"
-                            class="text-xs text-blue-600 hover:text-blue-800 underline underline-offset-1">
-                      Rétablir
-                    </button>
+                    <button @click="resetOverride({{ idx }})" class="text-xs text-blue-600 hover:text-blue-800 underline underline-offset-1">Rétablir</button>
                   </div>
                   {% else %}
                   <div x-show="ignoring !== {{ idx }}">
                     <button @click="startIgnore({{ idx }})"
-                            class="text-xs px-2 py-1 rounded border border-amber-200
-                                   text-amber-700 hover:bg-amber-50 transition-colors">
+                            class="text-xs px-2 py-1 rounded border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors">
                       Ignorer
                     </button>
                   </div>
                   <div x-show="ignoring === {{ idx }}" x-cloak class="space-y-1.5 w-52">
-                    <input type="text" x-model="reason"
-                           placeholder="Raison (doublon, erreur de saisie…)"
-                           class="text-xs border border-amber-300 rounded-md px-2 py-1.5 w-full
-                                  focus:ring-1 focus:ring-amber-400 focus:border-amber-400"
-                           @keydown.enter.prevent="confirmIgnore()"
-                           @keydown.escape.prevent="cancelIgnore()">
+                    <input type="text" x-model="reason" placeholder="Raison (compte admin, service, …)"
+                           class="text-xs border border-amber-300 rounded-md px-2 py-1.5 w-full focus:ring-1 focus:ring-amber-400 focus:border-amber-400"
+                           @keydown.enter.prevent="confirmIgnore()" @keydown.escape.prevent="cancelIgnore()">
                     <div class="flex gap-1">
-                      <button @click="confirmIgnore()"
-                              class="text-xs px-2.5 py-1 bg-amber-500 hover:bg-amber-600
-                                     text-white rounded font-medium transition-colors">
-                        Confirmer
-                      </button>
-                      <button @click="cancelIgnore()"
-                              class="text-xs px-2 py-1 border border-gray-300
-                                     text-gray-600 hover:bg-gray-50 rounded transition-colors">
-                        Annuler
-                      </button>
+                      <button @click="confirmIgnore()" class="text-xs px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded font-medium transition-colors">Confirmer</button>
+                      <button @click="cancelIgnore()" class="text-xs px-2 py-1 border border-gray-300 text-gray-600 hover:bg-gray-50 rounded transition-colors">Annuler</button>
                     </div>
                   </div>
                   {% endif %}
@@ -321,35 +270,47 @@
           <svg class="h-10 w-10 mb-2 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0"/>
           </svg>
-          <p class="font-medium text-green-600">Toutes les attestations sont conformes</p>
+          <p class="font-medium text-green-600">Aucun écart — tous les comptes nominatifs sont conformes</p>
         </div>
         {% endif %}
       </div>
 
-      <!-- Tous -->
+      <!-- Tous les comptes -->
       <div x-show="tab === 'tous'" x-cloak>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="text-left border-b border-gray-200 bg-gray-50">
-                <th class="px-3 py-2 font-medium text-gray-600">Nom / Prénom</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Société</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Service</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Domaine</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Rôle</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Date attestation</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Login</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Nom complet</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Profil</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Type</th>
+                <th class="px-3 py-2 font-medium text-gray-600">NOM TECHNIQUE</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Rôle LIR</th>
+                <th class="px-3 py-2 font-medium text-gray-600">Service LIR</th>
                 <th class="px-3 py-2 font-medium text-gray-600">Statut</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               {% for r in data.results %}
-              <tr class="{% if r.status == 'CONFORME' %}bg-green-50{% elif r.status == 'ATTESTATION EXPIRÉE' %}bg-orange-50{% else %}bg-red-50{% endif %} hover:opacity-80">
-                <td class="px-3 py-2 font-medium">{{ r.name }}</td>
-                <td class="px-3 py-2 text-xs text-gray-600">{{ r.get('societe', '—') }}</td>
-                <td class="px-3 py-2 text-xs text-gray-600">{{ r.get('service', '—') }}</td>
-                <td class="px-3 py-2 text-xs text-gray-600">{{ r.get('domaine', '—') }}</td>
-                <td class="px-3 py-2 text-xs text-gray-600">{{ r.role }}</td>
-                <td class="px-3 py-2 text-xs text-gray-500">{{ r.date_attestation or '—' }}</td>
+              <tr class="{% if r.status == 'CONFORME' %}bg-green-50
+                         {% elif r.status.startswith('N/A') %}bg-gray-50
+                         {% elif r.status == 'NON TROUVÉ LIR' %}bg-orange-50
+                         {% else %}bg-red-50{% endif %} hover:opacity-80">
+                <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ r.username }}</td>
+                <td class="px-3 py-2 font-medium text-sm">{{ r.name }}</td>
+                <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ r.profile }}</td>
+                <td class="px-3 py-2">
+                  <span class="text-xs px-1.5 py-0.5 rounded
+                               {% if r.type_compte == 'Nominatif' %}bg-blue-100 text-blue-700
+                               {% elif r.type_compte == 'Bris de glace' %}bg-purple-100 text-purple-700
+                               {% else %}bg-gray-100 text-gray-500{% endif %}">
+                    {{ r.type_compte }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 font-mono text-xs text-gray-500">{{ r.nom_tech or '—' }}</td>
+                <td class="px-3 py-2 text-xs text-gray-600">{{ r.role_lir or '—' }}</td>
+                <td class="px-3 py-2 text-xs text-gray-600">{{ r.service_lir or '—' }}</td>
                 <td class="px-3 py-2">{{ status_badge(r.status) }}</td>
               </tr>
               {% endfor %}
@@ -371,7 +332,6 @@
         </svg>
         Enregistrer le résultat
       </h2>
-      <p class="text-xs text-primary-700 mt-0.5">Complétez si nécessaire puis validez pour créer l'entrée dans le plan de contrôle.</p>
     </div>
     <form method="post" action="/plugin/run/{{ run.id }}/valider" class="px-5 py-4 space-y-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -379,27 +339,22 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">Taux de conformité (%)</label>
           <input type="number" name="taux_conformite" min="0" max="100" step="0.1"
                  value="{{ run.taux_conformite }}" required
-                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                        focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-          <p class="text-xs text-gray-400 mt-0.5">Calculé automatiquement : {{ run.taux_conformite }}% — modifiable</p>
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Notes internes (optionnel)</label>
-          <input type="text" name="notes" placeholder="Observations, contexte particulier…"
-                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                        focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+          <input type="text" name="notes" placeholder="Observations…"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
         </div>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Commentaire</label>
         <textarea name="commentaire" rows="3"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                         focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none">{{ run.commentaire_auto or '' }}</textarea>
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none">{{ run.commentaire_auto or '' }}</textarea>
       </div>
       <div class="flex items-center gap-3 pt-1">
         <button type="submit"
-                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white
-                       font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">
+                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
           </svg>
@@ -421,10 +376,7 @@
         Taux : {{ run.taux_conformite }}%
       </p>
     </div>
-    <a href="/controls/{{ control.id }}"
-       class="ml-auto text-sm text-green-700 hover:text-green-900 underline underline-offset-2">
-      Retourner au contrôle
-    </a>
+    <a href="/controls/{{ control.id }}" class="ml-auto text-sm text-green-700 hover:text-green-900 underline underline-offset-2">Retourner au contrôle</a>
   </div>
   {% endif %}
 
